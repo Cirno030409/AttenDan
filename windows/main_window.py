@@ -3,8 +3,7 @@ import PySimpleGUI as sg
 import config.constant_values as const
 
 
-def set_gui_layout():
-    global state_nfc
+def get_window():
     frame_main_control = sg.Frame(
         "主な操作",
         [
@@ -312,10 +311,10 @@ def set_gui_layout():
     ]
 
     # NFCの待機状態を表示するキャンバス
-    if state_nfc == const.DISCONNECTED:
+    if const.state_nfc == const.DISCONNECTED:
         color = "red"
         msg = "カードリーダが接続されていません"
-    elif state_nfc == const.STAND_BY:
+    elif const.state_nfc == const.STAND_BY:
         color = "green"
         msg = "カードをタッチしてください"
 
@@ -343,5 +342,14 @@ def set_gui_layout():
             )
         ],
     ]
+    
+    window = sg.Window(
+        "ロボ団 出欠システム  ver. " + const.VERSION,
+        layout,
+        resizable=False,
+        finalize=True,
+        size=(1300, 750),
+        return_keyboard_events=True,
+    )
 
-    return layout
+    return window
