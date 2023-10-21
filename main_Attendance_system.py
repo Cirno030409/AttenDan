@@ -108,15 +108,15 @@ def showgui_main():  # GUIを表示
             elif event == "-rollback-":
                 db.rollback_database()
 
-    # 生徒登録画面のボタン
-    elif event == "-register-":
-        register_student(
-            values["-st_name-"],
-            values["-st_age-"],
-            values["-st_gender-"],
-            values["-st_parentsname-"],
-            values["-st_mail_address-"],
-        )
+        # 生徒登録画面のボタン
+        elif event == "-register-":
+            register_student(
+                values["-st_name-"],
+                values["-st_age-"],
+                values["-st_gender-"],
+                values["-st_parentsname-"],
+                values["-st_mail_address-"],
+            )
 
 
 def register_student(
