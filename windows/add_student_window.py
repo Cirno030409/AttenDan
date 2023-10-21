@@ -1,7 +1,7 @@
 import PySimpleGUI as sg
 
 
-def show_window():
+def get_window():
     layout = [
         [
             sg.Text("Add Student", font=("Arial", 25)),
@@ -14,3 +14,5 @@ def show_window():
         keep_on_top=True,
         finalize=True,
     )
+    
+    return window

@@ -15,7 +15,7 @@ import Use_Database_sql as md
 import Use_Mail as mm
 import Use_NFC as nfc
 import windows.add_student_window as add_student_window
-import windows.main_window_layout as main_window_layout
+import windows.main_window as main_window
 
 db = md.Database()
 ml = mm.Mail()
@@ -38,23 +38,13 @@ def showgui_main():  # GUIを表示
     toggles = {
         "power": True,
     }
-    global state  # システム状態
-    state_tmp = state  # 状態を一時保存
+    const.state  # システム状態
+    state_tmp = const.state  # 状態を一時保存
 
     sg.theme("BluePurple")  # テーマをセット
 
-    layout = main_window_layout.set_gui_layout()  # GUIのレイアウトをセット
-
-    # GUIタイトルと全体レイアウトをのせたWindowを定義する。画面サイズは省略OK
-    # resizableでWindowサイズをマウスで変更できるようになる
-    main_window = sg.Window(
-        "ロボ団 出欠システム  ver. " + const.VERSION,
-        layout,
-        resizable=False,
-        finalize=True,
-        size=(1300, 750),
-        return_keyboard_events=True,
-    )
+    main_win = main_window.get_window()  # windowを取得
+    
 
     threading.Thread(
         target=nfc_update_sub_thread, daemon=True
@@ -67,78 +57,77 @@ def showgui_main():  # GUIを表示
     # メインループ ====================================================================================================
     while True:
         # ウィンドウ表示
-        win, event, values = sg.read_all_windows(timeout=0)
+        window, event, values = sg.read_all_windows(timeout=0)
 
-        # クローズボタンの処理
-        if event == sg.WIN_CLOSED:
-            break
+        # 全ウィンドウのGUIウィジェットの更新
+        
+        # メインウィンドウ
+        if window == main_win:
+            # クローズボタンの処理
+            if event == sg.WIN_CLOSED:
+                break
+            # システム状態切り替えトグルボタン
+            if event == "-power-":
+                toggles["power"] = not toggles["power"]
+                if toggles["power"]:
+                    state = const.STAND_BY
+                    print("[Info] システムが有効化されました")
+                else:
+                    state = const.STOP
+                    print("[Info] システムが無効化されました")
 
-        # 各ウィジェットの処理
-        if win == main_window:
-            gui_widget_update(main_window, event, values, toggles)
+                window["-power-"].update(
+                    text="システム動作中" if toggles["power"] else "システム停止中",
+                    button_color="white on green" if toggles["power"] else "white on red",
+                )
+            elif event == "\r":
+                print("[Info] SQL command entered.")
+
+            # データベース管理パネルのボタン
+            elif event == "-show_all_students-":
+                print_formatted_list(db.execute_database("SELECT * FROM student"))
+            elif event == "-show_all_system_logs-":
+                print_formatted_list(db.execute_database("SELECT * FROM system_log"))
+            elif event == "-add_student-":
+                add_student_win = add_student_window.get_window()
+            elif event == "-remove_student-":
+                pass
+
+            # 　SQLの操作パネルのボタン
+            elif event == "-execute-":
+                if values["-sql-"] == "":
+                    print("[Error] SQL command is empty.")
+                else:
+                    print("[Info] Executing SQL command...")
+                    ret = db.execute_database(values["-sql-"])
+                    if ret != -1:
+                        print_formatted_list(ret)
+                    print("[Info] SQL command execution completed.")
+            elif event == "-commit-":
+                db.commit_database()
+            elif event == "-rollback-":
+                db.rollback_database()
+
+            # 生徒登録画面のボタン
+            elif event == "-register-":
+                register_student(
+                    values["-st_name-"],
+                    values["-st_age-"],
+                    values["-st_gender-"],
+                    values["-st_parentsname-"],
+                    values["-st_mail_address-"],
+                )
+                
+        # 生徒追加ウィンドウの更新
+        elif window == add_student_win:
+            pass
 
         # NFCカードがタッチされたとき
-        if nfc_data["touched_flag"]:
+        if const.nfc_data["touched_flag"]:
             nfc_touched()  # NFCカードがタッチされたときの処理
 
-        main_window["-log-"].update()
-
-    main_window.close()
-    #              ====================================================================================================
-
-
-def gui_widget_update(window, event, values, toggles):
-    # システム状態切り替えトグルボタン
-    if event == "-power-":
-        toggles["power"] = not toggles["power"]
-        if toggles["power"]:
-            state = const.STAND_BY
-            print("[Info] システムが有効化されました")
-        else:
-            state = const.STOP
-            print("[Info] システムが無効化されました")
-
-        window["-power-"].update(
-            text="システム動作中" if toggles["power"] else "システム停止中",
-            button_color="white on green" if toggles["power"] else "white on red",
-        )
-    elif event == "\r":
-        print("[Info] SQL command entered.")
-
-    # データベース管理パネルのボタン
-    elif event == "-show_all_students-":
-        print_formatted_list(db.execute_database("SELECT * FROM student"))
-    elif event == "-show_all_system_logs-":
-        print_formatted_list(db.execute_database("SELECT * FROM system_log"))
-    elif event == "-add_student-":
-        add_student_window.show_window()
-    elif event == "-remove_student-":
-        pass
-
-    # 　SQLの操作パネルのボタン
-    elif event == "-execute-":
-        if values["-sql-"] == "":
-            print("[Error] SQL command is empty.")
-        else:
-            print("[Info] Executing SQL command...")
-            ret = db.execute_database(values["-sql-"])
-            if ret != -1:
-                print_formatted_list(ret)
-            print("[Info] SQL command execution completed.")
-    elif event == "-commit-":
-        db.commit_database()
-    elif event == "-rollback-":
-        db.rollback_database()
-
-    # 生徒登録画面のボタン
-    elif event == "-register-":
-        register_student(
-            values["-st_name-"],
-            values["-st_age-"],
-            values["-st_gender-"],
-            values["-st_parentsname-"],
-            values["-st_mail_address-"],
-        )
+    main_win.close()
+    #              ==================================================================================================== 
 
 
 def register_student(
@@ -148,7 +137,6 @@ def register_student(
 
 
 def init_system():  # 初期化
-    global state_nfc
     print("[Info] system initializing...")
     if db.connect_to_Database() == -1:  # データベースに接続する
         print("[Error] Couldn't connect to database.")
@@ -162,7 +150,7 @@ def init_system():  # 初期化
         if rd.connect_reader() == -1:
             print("[Error] Couldn't connect to NFC reader.")
         else:
-            state_nfc = const.STAND_BY
+            const.state_nfc = const.STAND_BY
 
     add_systemlog_to_database("システム起動")  # システムログに記録
     print("[Info] system initialized.")
