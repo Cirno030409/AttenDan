@@ -108,26 +108,15 @@ def showgui_main():  # GUIを表示
             elif event == "-rollback-":
                 db.rollback_database()
 
-            # 生徒登録画面のボタン
-            elif event == "-register-":
-                register_student(
-                    values["-st_name-"],
-                    values["-st_age-"],
-                    values["-st_gender-"],
-                    values["-st_parentsname-"],
-                    values["-st_mail_address-"],
-                )
-                
-        # 生徒追加ウィンドウの更新
-        elif window == add_student_win:
-            pass
-
-        # NFCカードがタッチされたとき
-        if const.nfc_data["touched_flag"]:
-            nfc_touched()  # NFCカードがタッチされたときの処理
-
-    main_win.close()
-    #              ==================================================================================================== 
+    # 生徒登録画面のボタン
+    elif event == "-register-":
+        register_student(
+            values["-st_name-"],
+            values["-st_age-"],
+            values["-st_gender-"],
+            values["-st_parentsname-"],
+            values["-st_mail_address-"],
+        )
 
 
 def register_student(
@@ -150,6 +139,7 @@ def init_system():  # 初期化
         if rd.connect_reader() == -1:
             print("[Error] Couldn't connect to NFC reader.")
         else:
+            const.state_nfc = const.STAND_BY
             const.state_nfc = const.STAND_BY
 
     add_systemlog_to_database("システム起動")  # システムログに記録
