@@ -1,6 +1,6 @@
 import PySimpleGUI as sg
 
-import config.constant_values as const
+import config.values as const
 
 
 def get_window():
@@ -135,7 +135,7 @@ def get_window():
                     key="-sql-",
                     tooltip="実行するSQL文を入力します",
                     background_color="black",
-                    text_color="green",
+                    text_color="light green",
                 ),
             ],
             [
@@ -310,7 +310,7 @@ def get_window():
         ]
     ]
 
-    # NFCの待機状態を表示するキャンバス
+    # NFCの待機状態を表示するフレーム
     if const.state_nfc == const.DISCONNECTED:
         color = "red"
         msg = "カードリーダが接続されていません"
@@ -328,7 +328,12 @@ def get_window():
                 expand_x=True,
                 justification="center",
                 key="-nfcstate-",
-            )
+            ),
+            sg.Text(
+                "00:00:00",
+                font=("Arial", 20, "bold"),
+                key="-time-",
+            ),
         ],
         [
             sg.TabGroup(

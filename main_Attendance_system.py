@@ -10,16 +10,16 @@ import time
 import PySimpleGUI as sg
 import simpleaudio as sa
 
-import config.constant_values as const
+import config.values as const
+import functions.nfc_func as nfc
 import Use_Database_sql as md
 import Use_Mail as mm
-import Use_NFC as nfc
 import windows.add_student_window as add_student_window
 import windows.main_window as main_window
 
 db = md.Database()
 ml = mm.Mail()
-rd = nfc.CardReader()
+
 
 
 def main():
@@ -30,7 +30,7 @@ def main():
     add_systemlog_to_database("システム終了")  # システムログに記録
     db.commit_database()  # データベースにコミットする
     db.disconnect_from_database()  # データベースを切断する
-    rd.disconnect_reader()  # NFCリーダーを切断する
+    nfc.disconnect_reader()  # NFCリーダーを切断する
     ml.logout_smtp()  # SMTPサーバーからログアウトする
 
 
@@ -47,7 +47,7 @@ def showgui_main():  # GUIを表示
     
 
     threading.Thread(
-        target=nfc_update_sub_thread, daemon=True
+        target=nfc.nfc_update_sub_thread, daemon=True
     ).start()  # NFCの更新を別スレッドで行う
 
     print(
@@ -58,6 +58,9 @@ def showgui_main():  # GUIを表示
     while True:
         # ウィンドウ表示
         window, event, values = sg.read_all_windows(timeout=0)
+        
+        # NFCのカードのタッチを確認
+        nfc.check_nfc_was_touched() # NFCカードがタッチされたかどうかを確認
 
         # 全ウィンドウのGUIウィジェットの更新
         
@@ -136,7 +139,7 @@ def init_system():  # 初期化
         print("[Error] Couldn't login to SMTP server.")
 
     if const.nfc_enabled:
-        if rd.connect_reader() == -1:
+        if nfc.connect_reader() == -1:
             print("[Error] Couldn't connect to NFC reader.")
         else:
             const.state_nfc = const.STAND_BY
@@ -185,26 +188,10 @@ def wait_card(message="カードをタッチしてください"):
         event, _ = window.read(timeout=0)
         if event == "-exit-":
             break
-        elif nfc_data["touched_flag"]:
+        elif id := nfc.check_nfc_was_touched() != -1: # NFCカードがタッチされた場合
             window.close()
-            return nfc_touched()
+            return id
     window.close()
-
-
-def nfc_touched():  # NFCカードがタッチされたときの処理
-    if const.debug_msg:
-        print("[Info] NFC card touched.", nfc_data["id"])
-    const.wav_touched.play()
-    nfc_data["touched_flag"] = False  # NFCカードがタッチされたフラグをFalseにする
-    return nfc_data["id"]
-
-
-def nfc_update_sub_thread():  # NFCの更新 別スレッドで実行される
-    global nfc_data
-    while True:
-        if not nfc_data["touched_flag"]:
-            nfc_data["id"] = rd.wait_for_card_touched()  # NFCカードの読み取りを待機
-            nfc_data["touched_flag"] = True
 
 
 def print_formatted_list(data: list):  # リストを整形して表示
