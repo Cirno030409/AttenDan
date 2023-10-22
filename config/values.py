@@ -1,5 +1,6 @@
 import simpleaudio as sa
 
+SYSTEM_NAME = "アテンダン"
 VERSION = "0.0.1"  # バージョン
 
 # システム状態の定数

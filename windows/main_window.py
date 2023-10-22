@@ -103,7 +103,7 @@ def get_window():
                     size=(15, 1),
                 ),
                 sg.Button(
-                    "生徒の削除",
+                    "生徒の除名",
                     key="-remove_student-",
                     tooltip="新規に生徒を登録します",
                     expand_x=True,
@@ -116,7 +116,7 @@ def get_window():
         expand_y=True,
     )
     frame_sql_control = sg.Frame(
-        "SQLでのデータベース管理",
+        "SQLでのデータベース管理（高度）",
         [
             [
                 sg.Text(
@@ -184,108 +184,6 @@ def get_window():
         [sg.Column(col1, vertical_alignment="top"), sg.Column(col2)],
     ]
 
-    # 生徒の登録タブ
-    frame_entry_st_info = sg.Frame(
-        "生徒情報",
-        [
-            [
-                sg.Text(
-                    "氏名:",
-                    font=("Arial", 15),
-                    justification="left",
-                    pad=((200, 0), (0, 0)),
-                    tooltip="生徒の名前",
-                ),
-                sg.InputText(
-                    size=(50, 1),
-                    font=("Arial", 15),
-                    key="-st_name-",
-                    pad=((160, 0), (0, 0)),
-                    tooltip="生徒の名前を入力します",
-                ),
-            ],
-            [
-                sg.Text(
-                    "年齢:",
-                    font=("Arial", 15),
-                    justification="left",
-                    pad=((200, 0), (0, 0)),
-                    tooltip="生徒の年齢",
-                ),
-                sg.InputText(
-                    size=(50, 1),
-                    font=("Arial", 15),
-                    key="-st_age-",
-                    pad=((160, 0), (0, 0)),
-                    tooltip="生徒の年齢を入力します",
-                ),
-            ],
-            [
-                sg.Text(
-                    "性別:",
-                    font=("Arial", 15),
-                    justification="left",
-                    pad=((200, 0), (0, 0)),
-                    tooltip="生徒の性別",
-                ),
-                sg.InputText(
-                    size=(50, 1),
-                    font=("Arial", 15),
-                    key="-st_gender-",
-                    pad=((160, 0), (0, 0)),
-                    tooltip="生徒の性別を入力します",
-                ),
-            ],
-            [
-                sg.Text(
-                    "保護者の氏名:",
-                    font=("Arial", 15),
-                    justification="left",
-                    pad=((200, 0), (0, 0)),
-                    tooltip="生徒の保護者の氏名",
-                ),
-                sg.InputText(
-                    size=(50, 1),
-                    font=("Arial", 15),
-                    key="-st_parentsname-",
-                    pad=((80, 0), (0, 0)),
-                    tooltip="生徒の保護者の氏名を入力します",
-                ),
-            ],
-            [
-                sg.Text(
-                    "連絡用メールアドレス:",
-                    font=("Arial", 15),
-                    justification="left",
-                    pad=((200, 0), (0, 0)),
-                ),
-                sg.InputText(
-                    size=(50, 1),
-                    font=("Arial", 15),
-                    key="-st_mail_address-",
-                    pad=((0, 0), (0, 0)),
-                    tooltip="出欠の連絡に使用する保護者への連絡用のメールアドレスを入力します",
-                ),
-            ],
-            [
-                sg.Button(
-                    "登録",
-                    size=(10, 2),
-                    key="-register-",
-                    tooltip="生徒を登録するときは，このボタンを押すか，IDカードをかざします",
-                    expand_x=True,
-                    pad=((20, 20), (20, 0)),
-                ),
-            ],
-        ],
-        size=(550, 450),
-        expand_x=True,
-        expand_y=True,
-    )
-    tab_register = [
-        [frame_entry_st_info],
-    ]
-
     # 送信するメールを設定するタブ
     tab_entered_mail_mes_layout = [
         [
@@ -340,7 +238,6 @@ def get_window():
                 [
                     [
                         sg.Tab("コントロールパネル", tab_main),
-                        sg.Tab("生徒の登録", tab_register),
                         sg.Tab("メールの設定", tab_set_mail_layout),
                     ]
                 ]
@@ -349,7 +246,7 @@ def get_window():
     ]
     
     window = sg.Window(
-        "ロボ団 出欠システム  ver. " + const.VERSION,
+        const.SYSTEM_NAME + "  ver. " + const.VERSION,
         layout,
         resizable=False,
         finalize=True,

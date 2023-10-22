@@ -6,7 +6,7 @@ class Database:
     def __init__(self):
         self.dbname = "RoboDone_AttendanceSystem_Database.db"
 
-    def connect_to_Database(self):  # データベースを読み出す
+    def connect_to_database(self):  # データベースを読み出す
         self.conn = sqlite3.connect(self.dbname)
         self.cur = self.conn.cursor()
         print("[Database] connected.")
