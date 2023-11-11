@@ -95,7 +95,7 @@ def get_window():
             ],
             [
                 sg.Button(
-                    "生徒の新規追加",
+                    "生徒の新規登録",
                     key="-add_student-",
                     tooltip="新規に生徒を登録します",
                     expand_x=True,

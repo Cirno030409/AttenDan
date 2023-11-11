@@ -106,10 +106,9 @@ def get_window():
     ]
 
     window = sg.Window(
-        "生徒の新規追加",
+        "生徒の新規登録",
         layout,
         finalize=True,
-        modal=True,
     )
     
     return window
