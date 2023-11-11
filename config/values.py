@@ -27,3 +27,8 @@ touched_flag: NFCカードがタッチされたかどうかを保持するフラ
 """
 
 wav_touched = sa.WaveObject.from_wave_file("sounds/touch_beep.wav")
+
+# 現在時刻
+hour = 0
+minute = 0
+second = 0

@@ -72,7 +72,7 @@ def get_window():
     )  # 幅,高さ
 
     # SQLコマンドのフレーム
-    frame_db__control = sg.Frame(
+    frame_db_control = sg.Frame(
         "データベース管理",
         [
             [
@@ -174,7 +174,7 @@ def get_window():
     col1 = [
         [frame_system_info],
         [frame_main_control],
-        [frame_db__control],
+        [frame_db_control],
         [frame_sql_control],
     ]
     col2 = [
@@ -228,7 +228,7 @@ def get_window():
                 key="-nfcstate-",
             ),
             sg.Text(
-                "00:00:00",
+                "%02d:%02d:%02d" % (const.hour, const.minute, const.second),
                 font=("Arial", 20, "bold"),
                 key="-time-",
             ),
@@ -244,7 +244,7 @@ def get_window():
             )
         ],
     ]
-    
+
     window = sg.Window(
         const.SYSTEM_NAME + "  ver. " + const.VERSION,
         layout,
@@ -255,3 +255,12 @@ def get_window():
     )
 
     return window
+
+
+if __name__ == "__main__":  # テスト用
+    window = get_window()
+    while True:
+        event, values = window.read()
+        if event == sg.WIN_CLOSED:
+            break
+    window.close()

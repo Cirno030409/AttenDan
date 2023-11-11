@@ -3,6 +3,7 @@ Attendance system for RoboDone main program
 Author@ yuta tanimura
 """
 
+import datetime
 import threading
 
 import PySimpleGUI as sg
@@ -138,6 +139,14 @@ def showgui_main():  # GUIを表示
                 values["-st_parentsname-"],
                 values["-st_mail_address-"],
             )
+
+        # 現在時刻の更新
+        const.hour = datetime.datetime.now().hour
+        const.minute = datetime.datetime.now().minute
+        const.second = datetime.datetime.now().second
+        window["-time-"].update(
+            "%02d:%02d:%02d" % (const.hour, const.minute, const.second)
+        )
 
 
 def register_student(
