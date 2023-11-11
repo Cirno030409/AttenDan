@@ -12,7 +12,7 @@ class Database:
         print("[Database] connected.")
 
     def execute_database(self, sql):  # データベースにコマンドを実行し，実行結果をかえす
-        print("[Database] Executing command. -->", sql)
+        # print("[Database] Executing command. -->", sql)
         try:
             self.cur.execute(sql)
         except sqlite3.OperationalError as e:

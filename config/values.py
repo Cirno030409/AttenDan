@@ -4,19 +4,19 @@ SYSTEM_NAME = "アテンダン"
 VERSION = "0.0.1"  # バージョン
 
 # システム状態の定数
-NOW_PROCESSING = 2
-STAND_BY = 1
-STOP = 0
+ENABLED = 1
+DISABLED = 0
 
 # NFCの状態の定数
 DISCONNECTED = 0
-STAND_BY = 1
+CONNECTED = 1
 
-state = STAND_BY  # システム状態
-state_nfc = DISCONNECTED  # NFCの状態
+states = dict()
+states["system"] = DISABLED  # システム状態
+states["nfc"] = True  # NFCの状態
 
 # Switching functions for debug
-nfc_enabled = True
+ignore_nfc_error = True
 debug_msg = True
 
 # Global variable

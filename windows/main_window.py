@@ -57,9 +57,9 @@ def get_window():
         [
             [
                 sg.Button(
-                    "システム動作中",
+                    "状態確認中...",
                     font=("Arial", 30, "bold"),
-                    button_color="white on green",
+                    button_color="gray",
                     key="-power-",
                     tooltip="システムの有効化/無効化を切り替えます",
                     expand_x=True,
@@ -208,24 +208,17 @@ def get_window():
         ]
     ]
 
-    # NFCの待機状態を表示するフレーム
-    if const.state_nfc == const.DISCONNECTED:
-        color = "red"
-        msg = "カードリーダが接続されていません"
-    elif const.state_nfc == const.STAND_BY:
-        color = "green"
-        msg = "カードをタッチしてください"
-
     layout = [
         [
             sg.Text(
-                msg,
-                background_color=color,
+                "状態を確認しています...",
+                background_color="gray",
                 text_color="white",
-                font=("Arial", 20),
+                font=("Arial", 20, "bold"),
                 expand_x=True,
                 justification="center",
                 key="-nfcstate-",
+                tooltip="NFCリーダーの状態",
             ),
             sg.Text(
                 "%02d:%02d:%02d" % (const.hour, const.minute, const.second),
