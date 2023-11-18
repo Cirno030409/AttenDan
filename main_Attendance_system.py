@@ -17,6 +17,8 @@ import Use_Database_sql as md
 import Use_Mail as mm
 import windows.add_student_window as add_student_window
 import windows.main_window as main_window
+import windows.remove_student_window as remove_student_window
+import windows.remove_student_without_card_window as remove_student_without_card_window
 import windows.splash_window as splash_window
 
 ml = mm.Mail()
@@ -67,8 +69,13 @@ def showgui_main():  # GUIを表示
 
         # 更新
         # NFCのカードのタッチを確認
-        if const.states["nfc"] == const.CONNECTED:
+        if (
+            const.states["nfc"] == const.CONNECTED
+            and const.states["system"] == const.ENABLED
+        ):
             nfc.check_nfc_was_touched()  # NFCカードがタッチされたかどうかを確認
+        else:
+            const.nfc_data["touched_flag"] = False
 
         # システムの状態をトグルボタンに反映
         if const.states["system"] == const.ENABLED:
@@ -173,7 +180,7 @@ def showgui_main():  # GUIを表示
                     )
             elif event == "-remove_student-":
                 if const.states["system"] == const.DISABLED:
-                    pass
+                    windows["remove_student"] = remove_student_window.get_window()
                 else:
                     sg.popup_ok(
                         "生徒を除名するには，入退室処理を無効化してください。有効化中にこの操作は行えません。",
@@ -198,7 +205,7 @@ def showgui_main():  # GUIを表示
                 db.rollback_database()
 
         # 生徒登録画面
-        elif win == windows["add_student"]:
+        elif "add_student" in windows and win == windows["add_student"]:
             if event == "-register-":
                 if (
                     values["-st_name-"] == ""
@@ -222,10 +229,66 @@ def showgui_main():  # GUIを表示
                     values["-st_mail_address-"],
                 )
 
+        # 生徒除名画面
+        elif "remove_student" in windows and win == windows["remove_student"]:
+            if event == "-remove-":
+                if values["-st_name-"] == "":
+                    sg.PopupOK(
+                        "除名する生徒の名前を入力してください。",
+                        title="生徒除名エラー",
+                        keep_on_top=True,
+                        modal=True,
+                    )
+                    continue
+                remove_student(values["-st_name-"])
+            elif event == "-register_without_card-":
+                windows["remove_student"].close()
+                windows[
+                    "remove_student_without_card"
+                ] = remove_student_without_card_window.get_window()
+
+        # 生徒除名画面（カードなし）
+        elif (
+            "remove_student_without_card" in windows
+            and win == windows["remove_student_without_card"]
+        ):
+            if event == "-register-":
+                if (
+                    values["-st_name-"] == ""
+                    or values["-st_age-"] == ""
+                    or values["-st_gender-"] == ""
+                    or values["-st_parentsname-"] == ""
+                    or values["-st_mail_address-"] == ""
+                ):
+                    sg.PopupOK(
+                        "除名する生徒の情報をすべて入力してください。",
+                        title="生徒除名エラー",
+                        keep_on_top=True,
+                        modal=True,
+                    )
+                    continue
+                remove_student_without_card(
+                    values["-st_name-"],
+                    values["-st_age-"],
+                    values["-st_gender-"],
+                    values["-st_parentsname-"],
+                    values["-st_mail_address-"],
+                )
+
 
 def register_student(
     name: str, age: int, gender: str, parent_name: str, mail_address: str
 ):  # 生徒を登録
+    """
+    生徒を登録します。
+
+    Args:
+        name (str): 登録する生徒の名前
+        age (int): 登録する生徒の年齢
+        gender (str): 登録する生徒の性別
+        parent_name (str): 登録する生徒の保護者の名前
+        mail_address (str): 登録する生徒の保護者のメールアドレス
+    """
     if (id := wait_card_popup("登録する生徒のカードをタッチしてください")) == -1:
         sg.popup_ok("生徒の登録がキャンセルされました。", title="キャンセル", keep_on_top=True, modal=True)
     else:
@@ -246,7 +309,86 @@ def register_student(
                 modal=True,
             )
         else:
-            sg.popup_ok("生徒の登録を完了しました。", title="完了", keep_on_top=True, modal=True)
+            sg.popup_ok("生徒の登録を完了しました。: " + name, title="完了", keep_on_top=True, modal=True)
+
+
+def remove_student(name: str):
+    """
+    生徒の名前とカード情報を使用して，生徒を除名します。入力された名前とカードの名前を照合して，一致すれば除名を行います。
+
+    Args:
+        name (str): 除名する生徒の名前
+    Returns:
+        ret (int): 成功した場合は 0，失敗した場合は -1 を返す。
+    """
+    if (id := wait_card_popup("除名する生徒のカードをタッチしてください")) == -1:
+        sg.popup_ok("生徒の除名がキャンセルされました。", title="キャンセル", keep_on_top=True, modal=True)
+    else:
+        ret = db.remove_student_from_database(id, name)
+        if ret == -1:
+            sg.popup_ok(
+                "生徒の除名に失敗しました。このカードはデータベースに登録されていません。別のカードを試してください。詳細は，システム出力を参照してください。",
+                title="エラー",
+                keep_on_top=True,
+                modal=True,
+            )
+        elif ret == -2:
+            sg.popup_ok(
+                "生徒の除名に失敗しました。入力された生徒の名前と，ICカードの登録されている名前が一致しません。別のカードを試してください。詳細は，システム出力を参照してください。",
+                title="エラー",
+                keep_on_top=True,
+                modal=True,
+            )
+            return -1
+        else:
+            sg.popup_ok("生徒の除名を完了しました。: " + name, title="完了", keep_on_top=True, modal=True)
+            
+
+
+def remove_student_without_card(
+    name: str, age: int, gender: str, parents_name: str, mail_address: str
+):
+    """
+    生徒の情報データのみを使って，生徒を除名します。全て一致するデータが見つかれば，除名を行います。
+
+    Args:
+        name (str): 除名する生徒の名前
+        age (int): 除名する生徒の年齢
+        gender (str): 除名する生徒の性別
+        parents_name (str): 除名する生徒の保護者の名前
+        mail_address (str): 除名する生徒の保護者のメールアドレス
+    """
+    students = db.execute_database(
+        "SELECT * FROM student natural join on student.id = parent.id"
+    )
+    print(students)
+    for student in students:
+        if (
+            student[0] == name
+            and student[1] == age
+            and student[2] == gender
+            and student[3] == parents_name
+            and student[4] == mail_address
+        ):
+            id = student["id"]
+            sg.popup_yes_no(
+                "入力された情報に一致する生徒が見つかりました。: \n氏名: %s\n年齢: %s\n性別: %s\n保護者の氏名: %s\n保護者のメールアドレス: %s\n\nこの生徒を除名を実行してよろしいですか？"
+                % name,
+                age,
+                gender,
+                parents_name,
+                mail_address,
+                title="除名の確認",
+                keep_on_top=True,
+                modal=True,
+            )
+
+    sg.popup_ok(
+        "入力された情報に一致する生徒が見つからなかったため，除名できませんでした。入力した情報が正しいか，もう一度確認してください",
+        title="除名エラー",
+        keep_on_top=True,
+        modal=True,
+    )
 
 
 def init_system():  # 初期化
@@ -288,6 +430,15 @@ def init_system():  # 初期化
 
 
 def popup_window(layout, duration=0):
+    """
+    ポップアップウィンドウを作成します。
+
+    Args:
+        layout (list): pysimpleguiのレイアウト
+        duration (int, optional): ウィンドウを表示する時間（秒）. Defaults to 0.
+    Returns:
+        window (sg.Window): ウィンドウ
+    """
     window = sg.Window(
         "Message",
         layout,

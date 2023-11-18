@@ -16,7 +16,7 @@ states["system"] = DISABLED  # システム状態
 states["nfc"] = True  # NFCの状態
 
 # Switching functions for debug
-ignore_nfc_error = True
+ignore_nfc_error = False
 debug_msg = True
 
 # Global variable
