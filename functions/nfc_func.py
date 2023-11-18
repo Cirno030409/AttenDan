@@ -10,13 +10,16 @@ touched_time = 0  # タッチされた時間を保存する変数
 
 
 def check_nfc_was_touched(dismiss_time=30):
-    global id_tmp, touched_time
     """
     NFCカードがタッチされたかどうかを確認する。指定された秒数内で，同一IDのカードが連続で読み込まれた場合，タッチされたとみなさない。
     
-    引数: dismiss_time: 同一IDのカードが連続で読み込まれた場合，指定された秒数だけ無視する。
-    戻り値: タッチされた場合はカードのID，タッチされていない場合は-1 を返す。
+    Args:
+        dismiss_time (int): 同一IDのカードが連続で読み込まれた場合，指定された秒数だけ無視する。
+    
+    Returns: 
+        ret (int): タッチされた場合はカードのID，タッチされていない場合は-1 を返す。
     """
+    global id_tmp, touched_time
     if const.nfc_data["touched_flag"]:
         const.nfc_data["touched_flag"] = False  # NFCカードがタッチされたのを確認したのでフラグをFalseにする
         if (
@@ -24,8 +27,7 @@ def check_nfc_was_touched(dismiss_time=30):
         ):  # NFCカードがタッチされたかどうかを確認
             const.wav_touched.play()  # タッチ音を再生
             touched_time = time.time()  # タッチされた時間を保存
-            if const.debug_msg:
-                print("[Info] NFC card touched.", const.nfc_data["id"])
+
             id_tmp = const.nfc_data["id"]  # IDを一時保存
             return const.nfc_data["id"]
 

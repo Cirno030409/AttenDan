@@ -11,8 +11,18 @@ class Database:
         self.cur = self.conn.cursor()
         print("[Database] connected.")
 
-    def execute_database(self, sql):  # データベースにコマンドを実行し，実行結果をかえす
-        # print("[Database] Executing command. -->", sql)
+    def execute_database(self, sql, debug=False):
+        """接続しているデータベースに対してSQLコマンドを実行する
+
+        Args:
+            sql (_type_): _description_
+            debug (bool): Trueにすると実行されたSQLコマンドを表示する
+            
+        Returns:
+            list: 実行結果
+        """
+        if debug:
+            print("[Database] Executing command. -->", sql)
         try:
             self.cur.execute(sql)
         except sqlite3.OperationalError as e:

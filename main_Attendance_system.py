@@ -68,34 +68,35 @@ def showgui_main():  # GUIを表示
         win, event, values = sg.read_all_windows(timeout=0)
 
         # 更新
-        # NFCのカードのタッチを確認
+        ## NFCのカードのタッチを確認
         if (
-            const.states["nfc"] == const.CONNECTED
-            and const.states["system"] == const.ENABLED
+            const.states["nfc"] == const.CONNECTED # NFCカードリーダが接続されている
+            and const.states["system"] == const.ENABLED # システムが有効化されている
         ):
-            nfc.check_nfc_was_touched()  # NFCカードがタッチされたかどうかを確認
+            if (id := nfc.check_nfc_was_touched()) != -1:  # NFCカードがタッチされたかどうかを確認
+                print("[Info] NFC card touched.", id)
         else:
-            const.nfc_data["touched_flag"] = False
+            const.nfc_data["touched_flag"] = False # システムが有効化されたときに，遅れてカードが反応しないように常にFalseにする
 
-        # システムの状態をトグルボタンに反映
+        ## システムの状態をトグルボタンに反映
         if const.states["system"] == const.ENABLED:
             toggles["power"] = True
         elif const.states["system"] == const.DISABLED:
             toggles["power"] = False
 
-        # メインウィンドウ
+        ## メインウィンドウ
         if win == windows["main"]:
-            # クローズボタンの処理
+            ### クローズボタンの処理
             if event == sg.WIN_CLOSED:
                 break
 
-            # トグル状態に応じてボタンのテキストを変更
+            ### トグル状態に応じてボタンのテキストを変更
             if toggles["power"]:
                 win["-power-"].update(text="入退室処理 有効", button_color="white on green")
             else:
                 win["-power-"].update(text="入退室処理 無効", button_color="white on red")
 
-            # NFCの状態表示を更新
+            ### NFCの状態表示を更新
             if const.states["nfc"] == const.DISCONNECTED:
                 win["-nfcstate-"].update(
                     "NFCカードリーダが接続されていません", background_color="red", text_color="white"
@@ -119,7 +120,7 @@ def showgui_main():  # GUIを表示
                     text_color="black",
                 )
 
-            # 現在時刻の更新
+            ### 現在時刻の更新
             const.hour = datetime.datetime.now().hour
             const.minute = datetime.datetime.now().minute
             const.second = datetime.datetime.now().second
@@ -127,7 +128,7 @@ def showgui_main():  # GUIを表示
                 "%02d:%02d:%02d" % (const.hour, const.minute, const.second)
             )
 
-            # システム状態切り替えトグルボタン
+            ### システム状態切り替えトグルボタン
             if event == "-power-":
                 toggles["power"] = not toggles["power"]  # トグルの状態を反転
                 if toggles["power"]:
@@ -163,7 +164,7 @@ def showgui_main():  # GUIを表示
                             "[Info] 現在の状態でNFCカードリーダにカードをタッチしても，入退室処理を行いません。カードをタッチしても安全です。"
                         )
 
-            # データベース管理パネルのボタン
+            ### データベース管理パネルのボタン
             if event == "-show_all_students-":
                 print_formatted_list(db.execute_database("SELECT * FROM student"))
             elif event == "-show_all_system_logs-":
@@ -189,7 +190,7 @@ def showgui_main():  # GUIを表示
                         modal=True,
                     )
 
-            # 　SQLの操作パネルのボタン
+            ### SQLの操作パネルのボタン
             elif event == "-execute-":
                 if values["-sql-"] == "":
                     print("[Error] SQL command is empty.")
@@ -204,7 +205,7 @@ def showgui_main():  # GUIを表示
             elif event == "-rollback-":
                 db.rollback_database()
 
-        # 生徒登録画面
+        ## 生徒登録画面
         elif "add_student" in windows and win == windows["add_student"]:
             if event == "-register-":
                 if (
@@ -229,7 +230,7 @@ def showgui_main():  # GUIを表示
                     values["-st_mail_address-"],
                 )
 
-        # 生徒除名画面
+        ## 生徒除名画面
         elif "remove_student" in windows and win == windows["remove_student"]:
             if event == "-remove-":
                 if values["-st_name-"] == "":
@@ -247,7 +248,7 @@ def showgui_main():  # GUIを表示
                     "remove_student_without_card"
                 ] = remove_student_without_card_window.get_window()
 
-        # 生徒除名画面（カードなし）
+        ## 生徒除名画面（カードなし）
         elif (
             "remove_student_without_card" in windows
             and win == windows["remove_student_without_card"]
@@ -301,10 +302,18 @@ def register_student(
             "id": id,
             "attendance": "退席",
         }
-        if db.add_student_to_database(data) == -1:
+        ret = db.add_student_to_database(data)
+        if ret == -1:
             sg.popup_ok(
-                "生徒の登録に失敗しました。詳細はシステム出力を参照してください。",
-                title="エラー",
+                "生徒の登録に失敗しました。このカードは既に登録されています。このカードを別の生徒に割り当てるには，まずこのカードを所有する生徒の除名を行ってください。詳細は，システム出力を参照してください。",
+                title="登録エラー",
+                keep_on_top=True,
+                modal=True,
+            )
+        elif ret == -2:
+            sg.popup_ok(
+                "生徒の登録に失敗しました。詳細は，システム出力を参照してください。",
+                title="登録エラー",
                 keep_on_top=True,
                 modal=True,
             )
