@@ -4,6 +4,40 @@ import Use_Database_sql
 
 db = Use_Database_sql.Database()
 
+def is_id_exists(id: str):  # IDがデータベースにあるか確認
+    """データベースに指定したIDがあるか確認する
+
+    Args:
+        id (str): 確認したいID
+        
+    Returns:
+        ret (bool): IDがある場合はTrue, ない場合はFalseを返す。
+    """
+    id_list = db.execute_database("SELECT id FROM student")  # データベースからidを取得
+    id_list = [item for sublist in id_list for item in sublist]  # 2次元リストを1次元に変換
+    
+    if id in id_list:  # idがデータベースにある場合
+        return True
+    else:
+        return False
+    
+def get_student_name(id:str):
+    """指定したIDに対応する生徒の名前を取得する
+
+    Args:
+        id (str): 生徒のID
+        
+    Returns:
+        name (str, int): 生徒の名前，IDがデータベースにない場合は-1を返す。
+    """
+    name = db.execute_database("SELECT name FROM student WHERE id = '%s'" % id)
+    
+    if len(name) == 0:  # idがデータベースにない場合
+        return -1
+    else:
+        name = name[0][0]
+    return name
+    
 
 def get_fields_from_database(table: str):  # データベースからフィールドを取得
     """指定のテーブルのフィールドを取得する
@@ -50,23 +84,26 @@ def remove_student_from_database(id: str, name: str):
     Returns:
         成功した場合は0, IDがデータベースにない場合は-1, IDに対応する名前が異なる場合は-2を返す。
     """
-    
-    id_list = db.execute_database("SELECT id FROM student")  # データベースからidを取得
-    id_list = [item for sublist in id_list for item in sublist]  # 2次元リストを1次元に変換
-
-    if len(id_list) == 0 or id not in id_list:  # idがデータベースにない場合
+    if not is_id_exists(id):  # idがデータベースにない場合
         print("[Error] 生徒の除名に失敗しました。このカードは登録されていません。 : ", id)
         return -1
     else:
-        touched_name = db.execute_database("SELECT name FROM student WHERE id = '%s'" % id)[0][0]
+        touched_name = get_student_name(id)  # タッチされたカードに登録されている名前を取得
 
     if name != touched_name:  # idに対応する名前が異なる場合
         print(
             "[Error] 生徒の除名に失敗しました。除名しようとした名前と，タッチされたカードに登録されている名前が異なります。 : 除名しようとした名前: %s, カードに登録されている名前: %s" % (name,touched_name))
         return -2
     else:
-        db.execute_database("DELETE FROM student WHERE id = '" + id + "'")  # 生徒データベースから除名
-        db.execute_database("DELETE FROM parent WHERE id = '" + id + "'")  # 保護者データベースから除名
+        if db.execute_database("DELETE FROM student WHERE id = '" + id + "'") == -1:  # 生徒データベースから除名
+            print("[Error] 生徒テーブルにおいて，生徒の除名に失敗しました。操作はロールバックされました。")
+            db.rollback_database()  # ロールバック
+            return -1
+        if db.execute_database("DELETE FROM parent WHERE id = '" + id + "'") == -1:  # 保護者データベースから除名
+            print("[Error] 保護者テーブルにおいて，生徒の除名に失敗しました。操作はロールバックされました。")
+            db.rollback_database()  # ロールバック
+            return -1
+        
         db.commit_database()  # データベースにコミットする
         add_systemlog_to_database("生徒の除名: " + name)  # システムログに記録
         print("[Remove] " + name + " が除名されました。")
@@ -77,7 +114,7 @@ def add_student_to_database(data: dict):
     生徒をデータベースに新規に追加する。
 
     Args:
-        data (dict): 生徒の情報を格納した辞書。辞書のキーはフィールド名と同じにすること。
+        data (dict): 生徒の情報を格納した辞書。辞書のキーはデータベースのフィールド名と同じにすること。
         
     Returns:
         成功した場合は0, すでに登録されている場合は-1, フィールドがデータベースにない場合は-2を返す。
@@ -92,15 +129,12 @@ def add_student_to_database(data: dict):
                 i,
             )
             return -2
-    id_list = db.execute_database("SELECT id FROM student")  # データベースからidを取得
-    id_list = [item for sublist in id_list for item in sublist]  # 2次元リストを1次元に変換
-    if len(id_list) != 0:  # データベースに生徒の情報が１つ以上ある場合
-        if data["id"] in id_list:  # idがデータベースにある場合
-            name = db.execute_database("SELECT name FROM student WHERE id = '" + data["id"] + "'")[0][0] # idに対応する名前を取得
-            print(
-                "[Error] 生徒の追加に失敗しました。このカードはすでに登録されています。このカードを別の生徒に割り当てるには，まずこのカードを所有する生徒の除名を行ってください。カードの所有者: ", name
-            )
-            return -1
+    if is_id_exists(data["id"]):  # idがデータベースにある場合
+        name = get_student_name(data["id"]) # idに対応する名前を取得
+        print(
+            "[Error] 生徒の追加に失敗しました。このカードはすでに登録されています。このカードを別の生徒に割り当てるには，まずこのカードを所有する生徒の除名を行ってください。カードの所有者: ", name
+        )
+        return -1
     
     # データベースのフィールドの順番にdataを並び変える
     student_data = get_dict_from_database("student")
@@ -138,7 +172,8 @@ def add_student_to_database(data: dict):
         , debug=True)
         == -1
     ):
-        print("[Error] add_student_to_database: Couldn't add data to parent table.")
+        print("[Error] add_student_to_database: 保護者テーブルにおいて，生徒の追加に失敗しました。操作はロールバックされました。")
+        db.rollback_database()  # ロールバック
         return -1
 
     add_systemlog_to_database("生徒の追加: " + data["name"])  # システムログに記録
@@ -178,20 +213,18 @@ def enter_room(id: str):  # 入室処理
     """
     生徒の入室処理を行う
 
-    引数: 生徒のID
-    戻り値: なし
+    Args:
+        id (str): 生徒のID
+        
+    Returns:
+        ret (int): 成功した場合は0, IDがデータベースにない場合は-1を返す。
     """
-    id_list = db.execute_database("SELECT id FROM student")  # データベースからidを取得
-    id_list_1d = []
-    for i in range(len(id_list)):
-        for j in range(len(id_list[i])):
-            id_list_1d.append(id_list[i][j])  # id_listを1次元リストに変換
-    if id not in id_list_1d:  # idがデータベースにない場合
+    if not is_id_exists(id):  # idがデータベースにない場合
         print("[Exit] No such ID in database.")
         return -1
 
     db.execute_database(
-        "UPDATE student SET attendance = '出席' WHERE id = 'id003'"
+        "UPDATE student SET attendance = '出席' WHERE id = '%s'" % id
     )  # 出席状況を欠席に変更
     dt = datetime.datetime.now()
     db.execute_database(
@@ -212,27 +245,25 @@ def enter_room(id: str):  # 入室処理
         + "', '入室')"
     )  # ログに記録
     db.commit_database()  # データベースにコミットする
-    print("[Enter] " + id + " Entered.", str(datetime.datetime.now()))
+    print("[Enter] > > > > " + get_student_name(id) + " が出席しました。")
 
 
 def exit_room(id: str):  # 退室処理
     """
     生徒の退出処理を行う。
 
-    引数: 生徒のID
-    戻り値: なし
+    Args:
+        id (str): 生徒のID
+        
+    Returns:
+        ret (int): 成功した場合は0, IDがデータベースにない場合は-1を返す。
     """
-    id_list = db.execute_database("SELECT id FROM student")  # データベースからidを取得
-    id_list_1d = []
-    for i in range(len(id_list)):
-        for j in range(len(id_list[i])):
-            id_list_1d.append(id_list[i][j])  # id_listを1次元リストに変換
-    if id not in id_list_1d:  # idがデータベースにない場合
+    if not is_id_exists(id):  # idがデータベースにない場合
         print("[Enter] No such ID in database.")
         return -1
 
     db.execute_database(
-        "UPDATE student SET attendance = '退席' WHERE id = 'id003'"
+        "UPDATE student SET attendance = '退席' WHERE id = '%s'" % id
     )  # 出席状況を欠席に変更
     dt = datetime.datetime.now()
     db.execute_database(
@@ -253,7 +284,7 @@ def exit_room(id: str):  # 退室処理
         + "', '退出')"
     )  # ログに記録
     db.commit_database()  # データベースにコミットする
-    print("[Exit] " + id + " Exited.", str(datetime.datetime.now()))
+    print("[Exit] > > > > " + get_student_name(id) + " が退出しました。")
 
 
 def commit_database():

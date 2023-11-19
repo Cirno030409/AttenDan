@@ -3,21 +3,24 @@ import PySimpleGUI as sg
 
 def get_window():
     layout = [
+        
         [
             sg.Text(
-                "カードを使わずに生徒を除名します。カードを紛失したり，カードが使えない場合は，このオプションを使用して生徒の除名を行ってください。それ以外の場合は，あまり使用しないでください。",
+                "生徒情報を使って生徒を除名します。除名すると，データベースから生徒の情報がすべて消去されます。",
                 font=("Arial", 10),
                 justification="center",
                 expand_x=True,
-                pad=((0, 20), (0, 10)),
+                tooltip="生徒の名前",
+                pad=((0, 20), (0, 0)),
             ),
         ],
         [
             sg.Text(
-                "除名する生徒の情報を入力してください:",
+                "除名する生徒の情報をすべて入力してください:",
                 font=("Arial", 10),
-                justification="left",
-                pad=((0, 10), (0, 20)),
+                justification="center",
+                expand_x=True,
+                pad=((0, 0), (0, 20)),
             ),
         ],
         [
@@ -25,7 +28,7 @@ def get_window():
                 "氏名:",
                 font=("Arial", 15),
                 justification="left",
-                pad=((20, 0), (0, 0)),
+                pad=((180, 0), (0, 0)),
                 tooltip="生徒の名前",
             ),
             sg.InputText(
@@ -42,7 +45,7 @@ def get_window():
                 "年齢:",
                 font=("Arial", 15),
                 justification="left",
-                pad=((20, 0), (0, 0)),
+                pad=((180, 0), (0, 0)),
                 tooltip="生徒の年齢",
             ),
             sg.InputText(
@@ -59,7 +62,7 @@ def get_window():
                 "性別:",
                 font=("Arial", 15),
                 justification="left",
-                pad=((20, 0), (0, 0)),
+                pad=((180, 0), (0, 0)),
                 tooltip="生徒の性別",
             ),
             sg.InputText(
@@ -76,7 +79,7 @@ def get_window():
                 "保護者の氏名:",
                 font=("Arial", 15),
                 justification="left",
-                pad=((20, 0), (0, 0)),
+                pad=((100, 0), (0, 0)),
                 tooltip="生徒の保護者の氏名",
             ),
             sg.InputText(
@@ -107,9 +110,9 @@ def get_window():
         [
             sg.Button(
                 "除名",
-                size=(20, 2),
-                key="-register-",
-                tooltip="生徒を除名するときは，このボタンを押すか，IDカードをかざします",
+                size=(10, 2),
+                key="-remove-",
+                tooltip="除名します。",
                 expand_x=True,
                 pad=((20, 20), (20, 0)),
             ),
@@ -120,6 +123,8 @@ def get_window():
         "カードを使わずに生徒を除名",
         layout,
         finalize=True,
+        # keep_on_top=True,
+        # modal=True,
     )
 
     return window

@@ -4,54 +4,7 @@ import config.values as const
 
 
 def get_window():
-    frame_main_control = sg.Frame(
-        "主な操作",
-        [
-            [
-                sg.Button(
-                    "テスト",
-                    size=(10, 1),
-                    key="-test-",
-                    tooltip="新規に生徒を登録します",
-                    expand_x=True,
-                ),
-            ],
-        ],
-        size=(550, 200),
-        vertical_alignment="top",
-        expand_x=True,
-    )  # 幅,高さ
-
-    # システムログのフレーム
-    frame_system_log = sg.Frame(
-        "システム出力",
-        [
-            # テキストレイアウト
-            [
-                sg.Multiline(
-                    size=(130, 100),
-                    font=("Arial", 12),
-                    key="-log-",
-                    echo_stdout_stderr=True,
-                    disabled=True,
-                    autoscroll=True,
-                    reroute_stdout=True,
-                    reroute_cprint=True,
-                    reroute_stderr=True,
-                    write_only=True,
-                    do_not_clear=True,
-                    expand_y=True,
-                    background_color="black",
-                    text_color="light green",
-                )
-            ],
-        ],
-        vertical_alignment="top",
-        # expand_y=True,
-        expand_x=True,
-    )
-
-    # システム状態切り替えボタンのフレーム
+    # 入退室切り替えボタンのフレーム
     frame_system_info = sg.Frame(
         "システム状態",
         [
@@ -67,19 +20,57 @@ def get_window():
                 ),
             ],
         ],
-        size=(550, 120),
+        expand_x=True,
+        size=(100, 150),
         vertical_alignment="top",
     )  # 幅,高さ
 
-    # SQLコマンドのフレーム
+    # 主な操作のフレーム
+    frame_main_control = sg.Frame(
+        "主な操作",
+        [
+            [
+                sg.Button(
+                    "テスト",
+                    size=(10, 1),
+                    key="-test-",
+                    tooltip="新規に生徒を登録します",
+                    expand_x=True,
+                ),
+            ],
+        ],
+        vertical_alignment="top",
+        expand_x=True,
+        expand_y=True,
+    )  # 幅,高さ
+
+    # データベース操作のフレーム
     frame_db_control = sg.Frame(
         "データベース管理",
         [
+            [
+                sg.Text(
+                    "生徒の追加・除名など，データベースの管理や表示を行います",
+                    font=("Arial", 10),
+                    expand_x=True,
+                    justification="center",
+                ),
+            ],
             [
                 sg.Button(
                     "生徒の一覧の表示",
                     key="-show_all_students-",
                     tooltip="データベースにある生徒の一覧をすべて表示します",
+                    expand_x=True,
+                    auto_size_button=False,
+                    size=(15, 1),
+                ),
+            ],
+            [
+                sg.Button(
+                    "入退室ログの表示",
+                    key="-show_all_logs-",
+                    tooltip="データベースにある入退室ログをすべて表示します",
                     expand_x=True,
                     auto_size_button=False,
                     size=(15, 1),
@@ -95,7 +86,7 @@ def get_window():
             ],
             [
                 sg.Button(
-                    "生徒の新規登録",
+                    "生徒の新規登録...",
                     key="-add_student-",
                     tooltip="新規に生徒を登録します",
                     expand_x=True,
@@ -103,7 +94,7 @@ def get_window():
                     size=(15, 1),
                 ),
                 sg.Button(
-                    "生徒の除名",
+                    "生徒の除名...",
                     key="-remove_student-",
                     tooltip="新規に生徒を登録します",
                     expand_x=True,
@@ -113,11 +104,21 @@ def get_window():
             ],
         ],
         expand_x=True,
-        expand_y=True,
+        expand_y=False,
     )
+
+    # SQL操作のフレーム
     frame_sql_control = sg.Frame(
         "SQLでのデータベース管理（高度）",
         [
+            [
+                sg.Text(
+                    "SQLコマンドを使用して，データベースの管理を行います。",
+                    font=("Arial", 10),
+                    expand_x=True,
+                    justification="center",
+                ),
+            ],
             [
                 sg.Text(
                     "SQLの実行:",
@@ -125,17 +126,16 @@ def get_window():
                     justification="left",
                     expand_x=True,
                     expand_y=True,
-                    pad=((0, 0), (0, 0)),
                     tooltip="データベースの管理",
                     key="-state-",
                 ),
                 sg.InputText(
-                    size=(50, 1),
                     font=("Arial", 15),
                     key="-sql-",
                     tooltip="実行するSQL文を入力します",
                     background_color="black",
                     text_color="light green",
+                    expand_x=True,
                 ),
             ],
             [
@@ -165,23 +165,66 @@ def get_window():
                 ),
             ],
         ],
-        size=(550, 120),
         expand_x=True,
+        expand_y=False,
+    )
+
+    # システムログのフレーム
+    frame_system_log = sg.Frame(
+        "システム出力",
+        [
+            [
+                sg.Multiline(
+                    font=("Arial", 10),
+                    key="-log-",
+                    echo_stdout_stderr=True,
+                    disabled=True,
+                    autoscroll=True,
+                    horizontal_scroll=True,
+                    reroute_stdout=True,
+                    reroute_cprint=True,
+                    
+                    write_only=True,
+                    do_not_clear=True,
+                    expand_x=True,
+                    expand_y=True,
+                    background_color="black",
+                    text_color="light green",
+                )
+            ],
+            [
+                sg.Button(
+                    "システム出力を別ウィンドウで表示...",
+                    size=(50, 1),
+                    key="-pop_log_win-",
+                    expand_x=True,
+                ),
+            ],
+        ],
+        vertical_alignment="top",
+        element_justification="left",
+        size=(750, 500),
         expand_y=True,
     )
 
-    # フレームを縦に並べる
-    col1 = [
-        [frame_system_info],
-        [frame_main_control],
-        [frame_db_control],
-        [frame_sql_control],
-    ]
-    col2 = [
-        [frame_system_log],
-    ]
+    # カラムレイアウト
     tab_main = [
-        [sg.Column(col1, vertical_alignment="top"), sg.Column(col2)],
+        [
+            sg.Column(
+                [
+                    [frame_system_info],
+                    [frame_main_control],
+                    [frame_db_control],
+                    [frame_sql_control],
+                ],
+                vertical_alignment="top",
+                justification="left",
+                expand_x=True,
+                # size=(600, 500),
+                expand_y=True,
+            ),
+            sg.Column([[frame_system_log]], expand_x=False, expand_y=True),
+        ],
     ]
 
     # 送信するメールを設定するタブ
@@ -232,9 +275,11 @@ def get_window():
                     [
                         sg.Tab("コントロールパネル", tab_main),
                         sg.Tab("メールの設定", tab_set_mail_layout),
-                    ]
-                ]
-            )
+                    ],
+                ],
+                expand_x=True,
+                expand_y=True,
+            ),
         ],
     ]
 

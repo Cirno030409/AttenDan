@@ -2,23 +2,34 @@ import PySimpleGUI as sg
 
 
 def get_window():
+    
     layout = [
+        
         [
             sg.Text(
-                "生徒を新規に登録します。登録する生徒の情報を入力してください。登録ボタンを選択後，登録するICカードをタッチしてください。",
+                "生徒を新規に登録します。登録ボタンを選択後，カードをタッチしてください。",
                 font=("Arial", 10),
                 justification="center",
                 expand_x=True,
                 tooltip="生徒の名前",
-                pad=((0, 20), (0, 20)),
+                pad=((0, 20), (0, 0)),
             ),
+        ],
+        [
+            sg.Text(
+                "登録する生徒の情報をすべて入力してください:",
+                font=("Arial", 10),
+                justification="center",
+                expand_x=True,
+                pad=((0, 0), (0, 20)),
+            ),            
         ],
         [
             sg.Text(
                 "氏名:",
                 font=("Arial", 15),
                 justification="left",
-                pad=((20, 0), (0, 0)),
+                pad=((180, 0), (0, 0)),
                 tooltip="生徒の名前",
             ),
             sg.InputText(
@@ -35,7 +46,7 @@ def get_window():
                 "年齢:",
                 font=("Arial", 15),
                 justification="left",
-                pad=((20, 0), (0, 0)),
+                pad=((180, 0), (0, 0)),
                 tooltip="生徒の年齢",
             ),
             sg.InputText(
@@ -52,7 +63,7 @@ def get_window():
                 "性別:",
                 font=("Arial", 15),
                 justification="left",
-                pad=((20, 0), (0, 0)),
+                pad=((180, 0), (0, 0)),
                 tooltip="生徒の性別",
             ),
             sg.InputText(
@@ -69,7 +80,7 @@ def get_window():
                 "保護者の氏名:",
                 font=("Arial", 15),
                 justification="left",
-                pad=((20, 0), (0, 0)),
+                pad=((100, 0), (0, 0)),
                 tooltip="生徒の保護者の氏名",
             ),
             sg.InputText(
@@ -113,6 +124,16 @@ def get_window():
         "生徒の新規登録",
         layout,
         finalize=True,
+        # keep_on_top=True,
+        # modal=True,
     )
 
     return window
+
+if __name__ == "__main__":
+    window = get_window()
+    while True:
+        event, values = window.read()
+        if event == sg.WIN_CLOSED:
+            break
+    window.close()

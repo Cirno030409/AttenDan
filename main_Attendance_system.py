@@ -6,6 +6,7 @@ Author@ yuta tanimura
 import datetime
 import os
 import threading
+import sys
 
 import PySimpleGUI as sg
 import simpleaudio as sa
@@ -20,6 +21,7 @@ import windows.main_window as main_window
 import windows.remove_student_window as remove_student_window
 import windows.remove_student_without_card_window as remove_student_without_card_window
 import windows.splash_window as splash_window
+import windows.popped_system_log_window as popped_system_log_window
 
 ml = mm.Mail()
 windows = {}
@@ -67,16 +69,20 @@ def showgui_main():  # GUIを表示
         # ウィンドウ表示
         win, event, values = sg.read_all_windows(timeout=0)
 
+        sg.theme("BluePurple")  # テーマをセット
+
         # 更新
         ## NFCのカードのタッチを確認
         if (
-            const.states["nfc"] == const.CONNECTED # NFCカードリーダが接続されている
-            and const.states["system"] == const.ENABLED # システムが有効化されている
+            const.states["nfc"] == const.CONNECTED  # NFCカードリーダが接続されている
+            and const.states["system"] == const.ENABLED  # システムが有効化されている
         ):
             if (id := nfc.check_nfc_was_touched()) != -1:  # NFCカードがタッチされたかどうかを確認
-                print("[Info] NFC card touched.", id)
+                run_attendance_process(id)  # 入退室処理を行う
         else:
-            const.nfc_data["touched_flag"] = False # システムが有効化されたときに，遅れてカードが反応しないように常にFalseにする
+            const.nfc_data[
+                "touched_flag"
+            ] = False  # システムが有効化されたときに，遅れてカードが反応しないように常にFalseにする
 
         ## システムの状態をトグルボタンに反映
         if const.states["system"] == const.ENABLED:
@@ -87,9 +93,9 @@ def showgui_main():  # GUIを表示
         ## メインウィンドウ
         if win == windows["main"]:
             ### クローズボタンの処理
-            if event == sg.WIN_CLOSED:
-                break
-
+            if event == sg.WIN_CLOSED or event is None:
+                sys.exit()
+                        
             ### トグル状態に応じてボタンのテキストを変更
             if toggles["power"]:
                 win["-power-"].update(text="入退室処理 有効", button_color="white on green")
@@ -166,11 +172,18 @@ def showgui_main():  # GUIを表示
 
             ### データベース管理パネルのボタン
             if event == "-show_all_students-":
-                print_formatted_list(db.execute_database("SELECT * FROM student"))
+                print("---- 生徒一覧 ----")
+                print_formatted_list(db.execute_database("SELECT * FROM student join parent on student.id = parent.id"))
             elif event == "-show_all_system_logs-":
+                print("---- システムログ ----")
                 print_formatted_list(db.execute_database("SELECT * FROM system_log"))
+            elif event == "-show_all_logs-":
+                print("---- 入退室ログ ----")
+                print_formatted_list(db.execute_database("SELECT * FROM log"))
             elif event == "-add_student-":
                 if const.states["system"] == const.DISABLED:
+                    if not is_ok_to_open_window(windows):
+                        continue
                     windows["add_student"] = add_student_window.get_window()
                 else:
                     sg.popup_ok(
@@ -181,6 +194,8 @@ def showgui_main():  # GUIを表示
                     )
             elif event == "-remove_student-":
                 if const.states["system"] == const.DISABLED:
+                    if not is_ok_to_open_window(windows):
+                        continue
                     windows["remove_student"] = remove_student_window.get_window()
                 else:
                     sg.popup_ok(
@@ -195,18 +210,29 @@ def showgui_main():  # GUIを表示
                 if values["-sql-"] == "":
                     print("[Error] SQL command is empty.")
                 else:
-                    print("[Info] Executing SQL command...")
+                    print("[Info] Executing SQL: " + values["-sql-"])
                     ret = db.execute_database(values["-sql-"])
                     if ret != -1:
                         print_formatted_list(ret)
-                    print("[Info] SQL command execution completed.")
+                    print("[Info] SQL execution completed.")
             elif event == "-commit-":
                 db.commit_database()
             elif event == "-rollback-":
                 db.rollback_database()
+            
+            ### システムログポップアウトボタン
+            elif event == "-pop_log_win-":
+                if "poppped_system_log_window" in windows:
+                    windows["poppped_system_log_window"].un_hide()
+                    continue
+                else:
+                    windows["poppped_system_log_window"] = popped_system_log_window.get_window()
 
-        ## 生徒登録画面
+        ## 生徒登録ウィンドウ
         elif "add_student" in windows and win == windows["add_student"]:
+            if event == sg.WIN_CLOSED or event is None:
+                win.close()
+                windows.pop("add_student") # ウィンドウを削除
             if event == "-register-":
                 if (
                     values["-st_name-"] == ""
@@ -222,6 +248,7 @@ def showgui_main():  # GUIを表示
                         modal=True,
                     )
                     continue
+
                 register_student(
                     values["-st_name-"],
                     values["-st_age-"],
@@ -230,8 +257,11 @@ def showgui_main():  # GUIを表示
                     values["-st_mail_address-"],
                 )
 
-        ## 生徒除名画面
+        ## 生徒除名ウィンドウ
         elif "remove_student" in windows and win == windows["remove_student"]:
+            if event == sg.WIN_CLOSED or event is None:
+                win.close()
+                windows.pop("remove_student")
             if event == "-remove-":
                 if values["-st_name-"] == "":
                     sg.PopupOK(
@@ -241,19 +271,25 @@ def showgui_main():  # GUIを表示
                         modal=True,
                     )
                     continue
+
                 remove_student(values["-st_name-"])
-            elif event == "-register_without_card-":
+
+            elif event == "-remove_without_card-":
                 windows["remove_student"].close()
+                windows.pop("remove_student")
                 windows[
                     "remove_student_without_card"
                 ] = remove_student_without_card_window.get_window()
 
-        ## 生徒除名画面（カードなし）
+        ## 生徒除名（カードなし）ウィンドウ
         elif (
             "remove_student_without_card" in windows
             and win == windows["remove_student_without_card"]
         ):
-            if event == "-register-":
+            if event == sg.WIN_CLOSED:
+                win.close()
+                windows.pop("remove_student_without_card")
+            if event == "-remove-":
                 if (
                     values["-st_name-"] == ""
                     or values["-st_age-"] == ""
@@ -268,6 +304,8 @@ def showgui_main():  # GUIを表示
                         modal=True,
                     )
                     continue
+                now_processing_window = now_processing_popup()  # 処理中のポップアップを表示
+                now_processing_window.read(timeout=0)
                 remove_student_without_card(
                     values["-st_name-"],
                     values["-st_age-"],
@@ -275,6 +313,71 @@ def showgui_main():  # GUIを表示
                     values["-st_parentsname-"],
                     values["-st_mail_address-"],
                 )
+                now_processing_window.close()
+                
+        ## ポップアウトされたシステム出力ウィンドウ
+        #! ポップアウトウィンドウをwindows側で閉じるとメインウィンドウに文字がでなくなるバグあり。原因不明。
+        elif "poppped_system_log_window" in windows and win == windows["poppped_system_log_window"]:
+            if event == sg.WIN_CLOSED or event is None:
+                win.hide()
+                
+            elif event == "-close-":
+                win.hide()
+                
+def is_ok_to_open_window(windows: dict, force_open: bool = False):
+    """
+    ウィンドウを開くことができるかどうかを判定します。同時表示してはいけないウィンドウがすでに開いている場合は，popupを表示して，Falseを返します。
+
+    Args:
+        windows (dict): ウィンドウの辞書
+    
+    Returns:
+        ret (bool): ウィンドウを開くことができるかどうか
+    """
+    win_num = len(windows) # 開いているウィンドウの数
+    if "poppped_system_log_window" in windows:
+        win_num -= 1
+    if win_num > 1:
+        sg.popup_ok(
+            "このウィンドウは複数同時に開けません。既に開いている別のウィンドウを閉じてから，この操作を行ってください。",
+            title="エラー",
+            keep_on_top=True,
+            modal=True,
+        )
+        return False
+    else:
+        return True
+
+
+def run_attendance_process(id: str):  # 入退室処理を行う
+    """生徒の入退室処理を行います。
+
+    Args:
+        id (str): 入退室処理を行う生徒のID
+    """
+    if const.states["system"] == const.DISABLED:
+        print("[警告]システムが無効化されているのに，入退室プロセスが実行されました！！")
+        return -1
+
+    print("[Info] 入退室プロセスを実行しています...")
+
+    if not db.is_id_exists(id):
+        print("[Error] このカードは登録されていないため，入退室処理は行われませんでした。")
+        return -1
+
+    attendance = db.execute_database(
+        "SELECT attendance FROM student WHERE id = '%s'" % id
+    )[0][0]
+
+    if attendance == "出席":
+        if db.exit_room(id) == -1:  # 退室処理
+            print("[Error] 退室処理に失敗しました。")
+    elif attendance == "退席":
+        if db.enter_room(id) == -1:  # 入室処理
+            print("[Error] 入室処理に失敗しました。")
+    else:
+        print("[Error] データベース上の生徒の出席状況が不正です。")
+        return -1
 
 
 def register_student(
@@ -293,6 +396,8 @@ def register_student(
     if (id := wait_card_popup("登録する生徒のカードをタッチしてください")) == -1:
         sg.popup_ok("生徒の登録がキャンセルされました。", title="キャンセル", keep_on_top=True, modal=True)
     else:
+        window = now_processing_popup()  # 処理中のポップアップを表示
+        
         data = {
             "name": name,
             "age": age,
@@ -303,6 +408,7 @@ def register_student(
             "attendance": "退席",
         }
         ret = db.add_student_to_database(data)
+        window.close()
         if ret == -1:
             sg.popup_ok(
                 "生徒の登録に失敗しました。このカードは既に登録されています。このカードを別の生徒に割り当てるには，まずこのカードを所有する生徒の除名を行ってください。詳細は，システム出力を参照してください。",
@@ -318,7 +424,9 @@ def register_student(
                 modal=True,
             )
         else:
-            sg.popup_ok("生徒の登録を完了しました。: " + name, title="完了", keep_on_top=True, modal=True)
+            sg.popup_ok(
+                "生徒の登録を完了しました。: " + name, title="完了", keep_on_top=True, modal=True
+            )
 
 
 def remove_student(name: str):
@@ -333,7 +441,11 @@ def remove_student(name: str):
     if (id := wait_card_popup("除名する生徒のカードをタッチしてください")) == -1:
         sg.popup_ok("生徒の除名がキャンセルされました。", title="キャンセル", keep_on_top=True, modal=True)
     else:
+        window = now_processing_popup()  # 処理中のポップアップを表示
+        
         ret = db.remove_student_from_database(id, name)
+        
+        window.close()
         if ret == -1:
             sg.popup_ok(
                 "生徒の除名に失敗しました。このカードはデータベースに登録されていません。別のカードを試してください。詳細は，システム出力を参照してください。",
@@ -350,8 +462,9 @@ def remove_student(name: str):
             )
             return -1
         else:
-            sg.popup_ok("生徒の除名を完了しました。: " + name, title="完了", keep_on_top=True, modal=True)
-            
+            sg.popup_ok(
+                "生徒の除名を完了しました。: " + name, title="完了", keep_on_top=True, modal=True
+            )
 
 
 def remove_student_without_card(
@@ -457,7 +570,28 @@ def popup_window(layout, duration=0):
         auto_close=False if duration == 0 else True,
         auto_close_duration=duration,
         modal=True,
+        border_depth=2,
     )
+    window.force_focus()
+    return window
+
+
+def now_processing_popup(message="処理中です..."):
+    sg.theme("LightGrey1")
+    layout = [
+        [
+            sg.Text(
+                message,
+                text_color="black",
+                font=("Arial", 20, "bold"),
+                key="-nfcstate-",
+                justification="center",
+                expand_x=True,
+            )
+        ],
+    ]
+    window = popup_window(layout)
+    window.read(timeout=0)
     return window
 
 
