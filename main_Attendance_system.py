@@ -7,7 +7,7 @@ import datetime
 import os
 import threading
 import sys
-
+import pickle
 import PySimpleGUI as sg
 import simpleaudio as sa
 
@@ -42,14 +42,27 @@ def main():
     ml.logout_smtp()  # SMTPサーバーからログアウトする
 
 
-def showgui_main():  # GUIを表示
+def showgui_main():  # GUIを表示 
+    
+    # 変数の初期化
     toggles = {
         "power": True,
     }
 
     sg.theme("BluePurple")  # テーマをセット
 
-    windows["main"] = main_window.get_window()  # windowを取得
+    windows["main"] = main_window.get_window()  # メインwindowを取得
+    
+    # 変数のロード
+    if os.path.exists(const.SAVES_PATH):
+        with open(const.SAVES_PATH, "rb") as f:
+            const.saves = pickle.load(f)
+    
+        # メールの設定を反映
+        windows["main"]["-entered_mail_subject-"].update(const.saves["mail"]["enter"]["subject"])
+        windows["main"]["-entered_mail_body-"].update(const.saves["mail"]["enter"]["body"])
+        windows["main"]["-exited_mail_subject-"].update(const.saves["mail"]["exit"]["subject"])
+        windows["main"]["-exited_mail_body-"].update(const.saves["mail"]["exit"]["body"])
 
     print(
         "=======    Welcome to "
@@ -94,6 +107,7 @@ def showgui_main():  # GUIを表示
         if win == windows["main"]:
             ### クローズボタンの処理
             if event == sg.WIN_CLOSED or event is None:
+                end_process()  # 終了処理
                 sys.exit()
                         
             ### トグル状態に応じてボタンのテキストを変更
@@ -227,6 +241,13 @@ def showgui_main():  # GUIを表示
                     continue
                 else:
                     windows["poppped_system_log_window"] = popped_system_log_window.get_window()
+                    
+            ### メールの設定タブ
+            #### メールの設定を保存
+            const.saves["mail"]["enter"]["subject"] = values["-entered_mail_subject-"]
+            const.saves["mail"]["enter"]["body"] = values["-entered_mail_body-"]
+            const.saves["mail"]["exit"]["subject"] = values["-exited_mail_subject-"]
+            const.saves["mail"]["exit"]["body"] = values["-exited_mail_body-"]
 
         ## 生徒登録ウィンドウ
         elif "add_student" in windows and win == windows["add_student"]:
@@ -237,7 +258,7 @@ def showgui_main():  # GUIを表示
                 if (
                     values["-st_name-"] == ""
                     or values["-st_age-"] == ""
-                    or values["-st_gender-"] == ""
+                    or values["-st_gender-"] == "未選択"
                     or values["-st_parentsname-"] == ""
                     or values["-st_mail_address-"] == ""
                 ):
@@ -293,7 +314,7 @@ def showgui_main():  # GUIを表示
                 if (
                     values["-st_name-"] == ""
                     or values["-st_age-"] == ""
-                    or values["-st_gender-"] == ""
+                    or values["-st_gender-"] == "未選択"
                     or values["-st_parentsname-"] == ""
                     or values["-st_mail_address-"] == ""
                 ):
@@ -324,6 +345,10 @@ def showgui_main():  # GUIを表示
             elif event == "-close-":
                 win.hide()
                 
+def end_process():  # 終了処理
+    with open(const.SAVES_PATH, "wb") as f:
+        pickle.dump(const.saves, f)
+                
 def is_ok_to_open_window(windows: dict, force_open: bool = False):
     """
     ウィンドウを開くことができるかどうかを判定します。同時表示してはいけないウィンドウがすでに開いている場合は，popupを表示して，Falseを返します。
@@ -350,13 +375,14 @@ def is_ok_to_open_window(windows: dict, force_open: bool = False):
 
 
 def run_attendance_process(id: str):  # 入退室処理を行う
-    """生徒の入退室処理を行います。
+    """
+    生徒の入退室処理を行います。出席状態を反転し，メールを送信します。
 
     Args:
         id (str): 入退室処理を行う生徒のID
     """
     if const.states["system"] == const.DISABLED:
-        print("[警告]システムが無効化されているのに，入退室プロセスが実行されました！！")
+        print("[!!警告!!] 致命的なエラーです。システム無効化中に，入退室プロセスが実行されようとしました。これはプロうグラム内の致命的なバグが発生したことを知らせるメッセージです。速やかに開発者に連絡し，修正してください。")
         return -1
 
     print("[Info] 入退室プロセスを実行しています...")
@@ -546,6 +572,8 @@ def init_system():  # 初期化
         threading.Thread(
             target=nfc.nfc_update_sub_thread, daemon=True
         ).start()  # NFCの更新を行うスレッドを起動
+        
+
 
     db.add_systemlog_to_database("システム起動")  # システムログに記録
     print("[Info] system initialized.")
@@ -596,6 +624,14 @@ def now_processing_popup(message="処理中です..."):
 
 
 def wait_card_popup(message="カードをタッチしてください"):
+    if const.states["nfc"] == const.DISCONNECTED:
+        sg.popup_ok(
+            "NFCカードリーダに接続できませんでした。NFCカードリーダが正常に接続されていることを確認してから，システムを再起動してください。",
+            title="NFCカードリーダ接続エラー",
+            keep_on_top=True,
+            modal=True,
+        )
+        return -1
     sg.theme("LightGrey1")
     layout = [
         [

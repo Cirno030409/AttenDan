@@ -6,11 +6,13 @@ import config.values as const
 def get_window():
     layout = [
         [
-            sg.Text(
-                "" + const.SYSTEM_NAME + " ver. " + const.VERSION,
-                font=("Arial", 20, "bold"),
-                justification="center",
-            )
+            sg.Image(
+                filename=const.SPLASH_IMAGE_PATH,
+                size=(840, 480),
+                pad=((0, 0), (0, 0)),
+                expand_x=True,
+                expand_y=True,
+            ),
         ],
     ]
 
@@ -19,7 +21,7 @@ def get_window():
         layout,
         no_titlebar=True,
         keep_on_top=True,
-        size=(600, 400),
+        size=(840, 480),
     )
 
     return window

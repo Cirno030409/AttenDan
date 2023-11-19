@@ -230,12 +230,76 @@ def get_window():
     # 送信するメールを設定するタブ
     tab_entered_mail_mes_layout = [
         [
-            sg.Text("入室時の送信するメールの内容を設定します"),
+            sg.Text("生徒が入室したときに送信する通知メールの内容を設定します", justification="center", expand_x=True),
+        ],
+        [
+            sg.Text(
+                "件名:",
+                font=("Arial", 15),
+                justification="left",
+                pad=((0, 0), (0, 0)),
+            ),
+            sg.InputText(
+                size=(50, 1),
+                font=("Arial", 15),
+                key="-entered_mail_subject-",
+                pad=((0, 0), (0, 0)),
+                expand_x=True,
+            ),
+        ],
+        [
+            sg.Text(
+                "本文:",
+                font=("Arial", 15),
+                justification="left",
+                pad=((0, 0), (0, 0)),
+
+            ),
+            sg.Multiline(
+                size=(50, 1),
+                font=("Arial", 15),
+                key="-entered_mail_body-",
+                pad=((0, 0), (0, 0)),
+                expand_x=True,
+                expand_y=True,
+            ),
         ]
     ]
     tab_exited_mail_mes_layout = [
         [
-            sg.Text("退室時の送信するメールの内容を設定します"),
+            sg.Text("生徒が退室したときに送信する通知メールの内容を設定します", justification="center", expand_x=True),
+        ],
+        [
+            sg.Text(
+                "件名:",
+                font=("Arial", 15),
+                justification="left",
+                pad=((0, 0), (0, 0)),
+            ),
+            sg.InputText(
+                size=(50, 1),
+                font=("Arial", 15),
+                key="-exited_mail_subject-",
+                pad=((0, 0), (0, 0)),
+                expand_x=True,
+            ),
+        ],
+        [
+            sg.Text(
+                "本文:",
+                font=("Arial", 15),
+                justification="left",
+                pad=((0, 0), (0, 0)),
+
+            ),
+            sg.Multiline(
+                size=(50, 1),
+                font=("Arial", 15),
+                key="-exited_mail_body-",
+                pad=((0, 0), (0, 0)),
+                expand_x=True,
+                expand_y=True,
+            ),
         ]
     ]
     tab_set_mail_layout = [
@@ -250,8 +314,32 @@ def get_window():
             )
         ]
     ]
+    
+    # メニューの定義
+    menu_def = [
+        [
+            "データベース操作", 
+                [
+                    "表示",
+                    [
+                        "生徒の一覧の表示",
+                        "入退室ログの表示",
+                        "システムログの表示"
+                    ]
+                ]
+        ],
+        [
+            "ヘルプ", 
+                [
+                    "バージョン情報"
+                ]
+        ]
+    ]
 
     layout = [
+        [
+            sg.Menu(menu_def)
+        ],
         [
             sg.Text(
                 "状態を確認しています...",
@@ -274,7 +362,7 @@ def get_window():
                 [
                     [
                         sg.Tab("コントロールパネル", tab_main),
-                        sg.Tab("メールの設定", tab_set_mail_layout),
+                        sg.Tab("メール内容の設定", tab_set_mail_layout),
                     ],
                 ],
                 expand_x=True,

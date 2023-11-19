@@ -66,13 +66,15 @@ def get_window():
                 pad=((180, 0), (0, 0)),
                 tooltip="生徒の性別",
             ),
-            sg.InputText(
-                size=(50, 1),
+            sg.Combo(
+                ["未選択", "男性", "女性"],
+                key = "-st_gender-",
+                default_value="未選択",
                 font=("Arial", 15),
-                key="-st_gender-",
                 pad=((0, 0), (0, 0)),
-                tooltip="生徒の性別を入力します",
+                tooltip="生徒の性別を選択します",
                 expand_x=True,
+                readonly=True,
             ),
         ],
         [
