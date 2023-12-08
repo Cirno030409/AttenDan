@@ -15,7 +15,7 @@ class Database:
         """接続しているデータベースに対してSQLコマンドを実行する
 
         Args:
-            sql (_type_): _description_
+            sql (str): 実行するSQLコマンド
             debug (bool): Trueにすると実行されたSQLコマンドを表示する
             
         Returns:

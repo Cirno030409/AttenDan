@@ -7,7 +7,7 @@ def get_window():
         
         [
             sg.Text(
-                "生徒を新規に登録します。登録ボタンを選択後，カードをタッチしてください。",
+                "生徒を新規に登録します。登録ボタンを選択後，カードをタッチしてください。\nCSVファイルから生徒データを読み込んで登録する場合は， CSVファイルから読み込んで登録 を選択してください。",
                 font=("Arial", 10),
                 justification="center",
                 expand_x=True,
@@ -67,7 +67,7 @@ def get_window():
                 tooltip="生徒の性別",
             ),
             sg.Combo(
-                ["未選択", "男性", "女性"],
+                ["未選択", "男", "女"],
                 key = "-st_gender-",
                 default_value="未選択",
                 font=("Arial", 15),
@@ -112,12 +112,22 @@ def get_window():
         ],
         [
             sg.Button(
-                "登録",
-                size=(10, 2),
-                key="-register-",
-                tooltip="生徒を登録するときは，このボタンを押すか，IDカードをかざします",
+                "CSVファイルから読み込んで登録...",
+                size=(50, 2),
+                key="-register_from_csv-",
+                tooltip="CSVファイルから生徒データを読み込んで登録します",
                 expand_x=True,
                 pad=((20, 20), (20, 0)),
+            ),
+        ],
+        [
+            sg.Button(
+                "カードをタッチして登録",
+                size=(50, 2),
+                key="-register-",
+                tooltip="生徒を登録するときは，このボタンを押して，IDカードをかざします",
+                expand_x=True,
+                pad=((20, 20), (0, 0)),
             ),
         ],
     ]

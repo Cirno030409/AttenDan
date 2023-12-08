@@ -66,7 +66,7 @@ def get_window():
                 tooltip="生徒の性別",
             ),
             sg.Combo(
-                ["未選択", "男性", "女性"],
+                ["未選択", "男", "女"],
                 key = "-st_gender-",
                 default_value="未選択",
                 font=("Arial", 15),

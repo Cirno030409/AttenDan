@@ -16,7 +16,7 @@ def get_window():
         ],
         [
             sg.Text(
-                "除名する生徒の氏名を入力してください:",
+                "確認のため，除名する生徒の氏名を入力してください:",
                 font=("Arial", 10),
                 justification="center",
                 expand_x=True,
@@ -42,8 +42,8 @@ def get_window():
         ],
         [
             sg.Button(
-                "除名",
-                size=(10, 2),
+                "カードをタッチして除名",
+                size=(50, 2),
                 key="-remove-",
                 tooltip="除名します。",
                 expand_x=True,

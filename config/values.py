@@ -40,7 +40,8 @@ saves = {
         "exit": {
             "subject": "", 
             "body": ""
-        }
+        },
+        "test_address": ""
     }
 }
 

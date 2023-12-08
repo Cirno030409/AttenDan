@@ -31,10 +31,11 @@ def get_window():
         [
             [
                 sg.Button(
-                    "テスト",
-                    size=(10, 1),
+                    "全画面待ち受けモードに切り替え",
+                    size=(30, 2),
                     key="-test-",
-                    tooltip="新規に生徒を登録します",
+                    tooltip="全画面待ち受けモードに切り替えます",
+                    button_color="black",
                     expand_x=True,
                 ),
             ],
@@ -45,12 +46,12 @@ def get_window():
     )  # 幅,高さ
 
     # データベース操作のフレーム
-    frame_db_control = sg.Frame(
-        "データベース管理",
+    frame_st_control = sg.Frame(
+        "生徒の管理",
         [
             [
                 sg.Text(
-                    "生徒の追加・除名など，データベースの管理や表示を行います",
+                    "生徒の追加・除名など，生徒の管理を行います",
                     font=("Arial", 10),
                     expand_x=True,
                     justification="center",
@@ -63,26 +64,16 @@ def get_window():
                     tooltip="データベースにある生徒の一覧をすべて表示します",
                     expand_x=True,
                     auto_size_button=False,
-                    size=(15, 1),
-                ),
-            ],
-            [
-                sg.Button(
-                    "入退室ログの表示",
-                    key="-show_all_logs-",
-                    tooltip="データベースにある入退室ログをすべて表示します",
-                    expand_x=True,
-                    auto_size_button=False,
-                    size=(15, 1),
+                    size=(20, 1),
                 ),
                 sg.Button(
-                    "システムログの表示",
-                    tooltip="システムログをすべて表示します",
-                    key="-show_all_system_logs-",
+                    "生徒にカードを割り当てる...",
+                    key="-assign_card_to_unassigned_student-",
+                    tooltip="未割り当ての生徒にカードを割り当てます",
                     expand_x=True,
                     auto_size_button=False,
-                    size=(15, 1),
-                ),
+                    size=(20, 1),
+                )
             ],
             [
                 sg.Button(
@@ -106,6 +97,41 @@ def get_window():
         expand_x=True,
         expand_y=False,
     )
+    
+    frame_db_control = sg.Frame(
+        "システムログ",
+        [
+            [
+                sg.Text(
+                    "システム関係のログを表示します",
+                    font=("Arial", 10),
+                    expand_x=True,
+                    justification="center",
+                ),
+            ],
+            [
+                sg.Button(
+                    "入退室ログの表示",
+                    key="-show_all_logs-",
+                    tooltip="データベースにある入退室ログをすべて表示します",
+                    expand_x=True,
+                    auto_size_button=False,
+                    size=(15, 1),
+                ),
+                sg.Button(
+                    "システムログの表示",
+                    tooltip="システムログをすべて表示します",
+                    key="-show_all_system_logs-",
+                    expand_x=True,
+                    auto_size_button=False,
+                    size=(15, 1),
+                ),
+            ],
+        ],
+        expand_x=True,
+        expand_y=False,
+    )
+
 
     # SQL操作のフレーム
     frame_sql_control = sg.Frame(
@@ -214,6 +240,7 @@ def get_window():
                 [
                     [frame_system_info],
                     [frame_main_control],
+                    [frame_st_control],
                     [frame_db_control],
                     [frame_sql_control],
                 ],
@@ -229,9 +256,6 @@ def get_window():
 
     # 送信するメールを設定するタブ
     tab_entered_mail_mes_layout = [
-        [
-            sg.Text("生徒が入室したときに送信する通知メールの内容を設定します", justification="center", expand_x=True),
-        ],
         [
             sg.Text(
                 "件名:",
@@ -267,9 +291,6 @@ def get_window():
     ]
     tab_exited_mail_mes_layout = [
         [
-            sg.Text("生徒が退室したときに送信する通知メールの内容を設定します", justification="center", expand_x=True),
-        ],
-        [
             sg.Text(
                 "件名:",
                 font=("Arial", 15),
@@ -304,6 +325,12 @@ def get_window():
     ]
     tab_set_mail_layout = [
         [
+            sg.Text("生徒が入退室したときに保護者に送信する通知メールの内容を設定します", justification="center", expand_x=True),
+        ],
+        [
+            sg.Text("「{name}」を入力すると，その部分が生徒の名前に置き換えられます", justification="center", expand_x=True)
+        ],
+        [
             sg.TabGroup(
                 [
                     [sg.Tab("入室時", tab_entered_mail_mes_layout)],
@@ -311,6 +338,22 @@ def get_window():
                 ],
                 expand_x=True,
                 expand_y=True,
+            )
+        ],
+        [
+            sg.InputText(
+                size=(50, 1),
+                font=("Arial", 15),
+                key="-test_mail_address-",
+                pad=((0, 0), (0, 0)),
+                expand_x=True,
+                tooltip="テストメールを送信するメールアドレスを入力します",
+                
+            ),
+            sg.Button(
+                "テストメールを送信",
+                size=(20, 1),
+                key="-send_test_mail-",
             )
         ]
     ]
@@ -320,12 +363,17 @@ def get_window():
         [
             "データベース操作", 
                 [
-                    "表示",
+                    "生徒の管理",
                     [
                         "生徒の一覧の表示",
+                        "生徒の新規登録",
+                        "生徒の除名",
+                    ],
+                    "システムログ",
+                    [
                         "入退室ログの表示",
-                        "システムログの表示"
-                    ]
+                        "システムログの表示",
+                    ],
                 ]
         ],
         [

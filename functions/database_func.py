@@ -135,14 +135,10 @@ def add_student_to_database(data: dict):
             "[Error] 生徒の追加に失敗しました。このカードはすでに登録されています。このカードを別の生徒に割り当てるには，まずこのカードを所有する生徒の除名を行ってください。カードの所有者: ", name
         )
         return -1
-    
-    # データベースのフィールドの順番にdataを並び変える
-    student_data = get_dict_from_database("student")
-    parent_data = get_dict_from_database("parent")
 
     fdata = []
     for i in fields_student:
-        fdata.append(data[i])
+        fdata.append(str(data[i]))
     # 引数の文字列を成形
     fields_attr = ", ".join(fields_student)  # フィールドをカンマ区切りにする
     data_attr = "', '".join(fdata)  # データをカンマ区切りにする
@@ -162,10 +158,7 @@ def add_student_to_database(data: dict):
         
     fields_attr = ", ".join(fields_parent)  # フィールドをカンマ区切りにする
     data_attr = "', '".join(fdata)  # データをカンマ区切りにする
-    
-    print(fields_attr)
-    print(data_attr)
-    
+        
     if (
         db.execute_database(
             "INSERT INTO parent (" + fields_attr + ") VALUES ('%s', '%s', '%s')" % (data["id"], data["parent_name"], data["mail_address"])
@@ -177,8 +170,9 @@ def add_student_to_database(data: dict):
         return -1
 
     add_systemlog_to_database("生徒の追加: " + data["name"])  # システムログに記録
-    db.commit_database()  # データベースにコミットする
     print("[Register] " + data["name"] + " が登録されました。")
+    
+    return 0
 
 
 def add_systemlog_to_database(data: str):  # システムログをデータベースに追加
@@ -206,7 +200,6 @@ def add_systemlog_to_database(data: str):  # システムログをデータベ�
         + data
         + "')"
     )  # ログに記録
-    db.commit_database()  # データベースにコミットする
 
 
 def enter_room(id: str):  # 入室処理

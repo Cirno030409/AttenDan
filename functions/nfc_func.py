@@ -5,8 +5,7 @@ import Use_NFC as nfc
 
 rd = nfc.CardReader()
 
-id_tmp = ""  # IDを一時保存する変数
-touched_time = 0  # タッチされた時間を保存する変数
+id_tmp = []  # 直近でタッチされたNFCカードのIDを一時保存するリスト"
 
 
 def check_nfc_was_touched(dismiss_time=30):
@@ -19,18 +18,19 @@ def check_nfc_was_touched(dismiss_time=30):
     Returns: 
         ret (int): タッチされた場合はカードのID，タッチされていない場合は-1 を返す。
     """
-    global id_tmp, touched_time
-    if const.nfc_data["touched_flag"]:
+    global id_tmp
+    if const.nfc_data["touched_flag"]:  # NFCカードがタッチされた
         const.nfc_data["touched_flag"] = False  # NFCカードがタッチされたのを確認したのでフラグをFalseにする
+        id_i = find_id_in_tmp(const.nfc_data["id"]) # 過去にタッチされたIDのリストを検索
         if (
-            const.nfc_data["id"] != id_tmp or time.time() - touched_time > dismiss_time
+            id_i == -1 or time.time() - id_tmp[id_i]["time"] > dismiss_time
         ):  # NFCカードがタッチされたかどうかを確認
-            const.wav_touched.play()  # タッチ音を再生
-            touched_time = time.time()  # タッチされた時間を保存
+            if id_i != -1:
+                id_tmp[id_i]["time"] = time.time() # タッチされたIDに時刻を更新
+            else:
+                id_tmp.append({"id" : const.nfc_data["id"], "time" : time.time()})  # 新規追加
 
-            id_tmp = const.nfc_data["id"]  # IDを一時保存
             return const.nfc_data["id"]
-
     return -1  # NFCカードがタッチされていない場合
 
 
@@ -39,6 +39,22 @@ def nfc_update_sub_thread():  # NFCの更新 別スレッドで実行される
         if not const.nfc_data["touched_flag"]:
             const.nfc_data["id"] = rd.wait_for_card_touched()  # NFCカードの読み取りを待機
             const.nfc_data["touched_flag"] = True
+            
+def find_id_in_tmp(id):
+    """
+    id_tmp内に指定のidがあればそのidがあるリストの要素番号を返し，もしなければ-1を戻り値とする関数
+    
+    Args:
+        id (str): 検索するID
+    
+    Returns:
+        index (int): idが見つかった場合はその要素番号，見つからなかった場合は-1
+    """
+    for i, d in enumerate(id_tmp):
+        if d['id'] == id:
+            return i
+    return -1
+
 
 
 def disconnect_reader():  # NFCリーダーの切断

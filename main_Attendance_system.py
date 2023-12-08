@@ -11,6 +11,7 @@ import pickle
 import PySimpleGUI as sg
 import simpleaudio as sa
 
+import csv
 import config.values as const
 import functions.database_func as db
 import functions.nfc_func as nfc
@@ -22,6 +23,9 @@ import windows.remove_student_window as remove_student_window
 import windows.remove_student_without_card_window as remove_student_without_card_window
 import windows.splash_window as splash_window
 import windows.popped_system_log_window as popped_system_log_window
+import windows.register_student_from_csv_window as register_student_from_csv_window
+import tqdm
+import uuid
 
 ml = mm.Mail()
 windows = {}
@@ -63,6 +67,7 @@ def showgui_main():  # GUIを表示
         windows["main"]["-entered_mail_body-"].update(const.saves["mail"]["enter"]["body"])
         windows["main"]["-exited_mail_subject-"].update(const.saves["mail"]["exit"]["subject"])
         windows["main"]["-exited_mail_body-"].update(const.saves["mail"]["exit"]["body"])
+        windows["main"]["-test_mail_address-"].update(const.saves["mail"]["test_address"])
 
     print(
         "=======    Welcome to "
@@ -91,7 +96,8 @@ def showgui_main():  # GUIを表示
             and const.states["system"] == const.ENABLED  # システムが有効化されている
         ):
             if (id := nfc.check_nfc_was_touched()) != -1:  # NFCカードがタッチされたかどうかを確認
-                run_attendance_process(id)  # 入退室処理を行う
+                print("[Info] 入退室プロセスを実行しています...")
+                run_attendance_process(id)  #! 入退室処理を行う
         else:
             const.nfc_data[
                 "touched_flag"
@@ -243,11 +249,43 @@ def showgui_main():  # GUIを表示
                     windows["poppped_system_log_window"] = popped_system_log_window.get_window()
                     
             ### メールの設定タブ
+            elif event == "-send_test_mail-":
+                if const.saves["mail"]["test_address"] == "":
+                    sg.popup_ok(
+                        "テストメールを送信するには，テストメールアドレスを設定してください。",
+                        title="エラー",
+                        keep_on_top=True,
+                        modal=True,
+                    )
+                    continue
+                if sg.popup_yes_no(
+                    "下記メールアドレスにテストメールを送信します。よろしいですか？なお，生徒の名前は「山田太郎」に置き換えて送信します。\n\n" + const.saves["mail"]["test_address"],
+                    title="テストメールの送信",
+                    keep_on_top=True,
+                    modal=True,
+                ) == "Yes":
+                    if send_mail(mode = "test") == -1:
+                        sg.popup_ok(
+                            "テストメールの送信に失敗しました。",
+                            title="エラー",
+                            keep_on_top=True,
+                            modal=True,
+                        )
+                    else:
+                        sg.popup_ok(
+                            "テストメールを送信しました。",
+                            title="完了",
+                            keep_on_top=True,
+                            modal=True,
+                        )
+                
             #### メールの設定を保存
             const.saves["mail"]["enter"]["subject"] = values["-entered_mail_subject-"]
             const.saves["mail"]["enter"]["body"] = values["-entered_mail_body-"]
             const.saves["mail"]["exit"]["subject"] = values["-exited_mail_subject-"]
             const.saves["mail"]["exit"]["body"] = values["-exited_mail_body-"]
+            const.saves["mail"]["test_address"] = values["-test_mail_address-"]
+            
 
         ## 生徒登録ウィンドウ
         elif "add_student" in windows and win == windows["add_student"]:
@@ -270,13 +308,111 @@ def showgui_main():  # GUIを表示
                     )
                     continue
 
-                register_student(
+                if register_student(
                     values["-st_name-"],
                     values["-st_age-"],
                     values["-st_gender-"],
                     values["-st_parentsname-"],
                     values["-st_mail_address-"],
-                )
+                ) == 0:
+                    db.commit_database()
+                    sg.PopupOK(
+                        "生徒を登録しました。",
+                        title="完了",
+                        keep_on_top=True,
+                        modal=True,
+                    )
+            elif event == "-register_from_csv-":
+                windows["add_student"].close()
+                windows.pop("add_student")
+                windows["register_student_from_csv"] = register_student_from_csv_window.get_window()
+                
+        ## CSVから生徒を登録ウィンドウ
+        elif "register_student_from_csv" in windows and win == windows["register_student_from_csv"]:
+            if event == sg.WIN_CLOSED or event is None:
+                win.close()
+                windows.pop("register_student_from_csv")
+            if event == "-load_csv-":
+                if (path := sg.popup_get_file("CSVファイルを選択してください", file_types=(("CSVファイル", "*.csv"),))) == (None or ""):
+                    continue
+                else:
+                    csv_error = False
+                    with open(path, "r", encoding="utf-8") as f:
+                        reader = csv.reader(f)
+                        students = list(reader)
+                        if students[0][0] == "生徒の氏名": # ヘッダーがある場合は削除
+                            students.pop(0) # ヘッダーを削除
+                        for student in students:
+                            if student[2] not in ["男", "女"]:
+                                print("CSV loading error: 性別が不正です。性別は「男」または「女」のいずれかである必要があります。")
+                                csv_error = True
+                                break
+                            for student in students:
+                                if len(student) != 5:
+                                    print("CSV loading error: フィールド数が不正です。")
+                                    csv_error = True
+                                    break
+                            try:
+                                for student in students:
+                                    int(student[1])
+                            except ValueError as e:
+                                print("CSV loading error: 年齢が不正です。年齢は数字である必要があります。")
+                                csv_error = True
+                                break
+                            if csv_error:
+                                break
+                                
+                        if len(students) == 0:
+                            sg.popup_ok(
+                                "このCSVファイルには生徒の情報がありません。CSVファイルを確認してください。",
+                                title="エラー",
+                                keep_on_top=True,
+                                modal=True,
+                            )
+                            continue
+                        
+                        if csv_error: # CSVファイルのデータ形式が正しくない場合
+                            sg.popup_ok(
+                                "CSVファイルのデータ形式が正しくありません。CSVファイルは以下のような形式である必要があります。\n\n\n生徒の氏名1,年齢(数字),性別(男 or 女),保護者名,保護者のメールアドレス\n生徒の氏名2,年齢(数字),性別(男 or 女),保護者名,保護者のメールアドレス\n.\n.\n.\n\n\nなお，性別は「男」または「女」のいずれかである必要があります。また，年齢は数字である必要があります。CSVファイルを確認してください。エラーの詳細は，システム出力を確認してください。",
+                                title="エラー",
+                                keep_on_top=True,
+                                modal=True,
+                            )
+                            continue
+                        win["-csv_file_path-"].update("CSVファイル:" + path)   
+                        win["-do_register_from_csv-"].update(disabled=False)               
+            elif event == "-do_register_from_csv-":
+                    if sg.popup_yes_no(
+                        "CSVファイルから%d人の生徒を登録します。一人目の生徒データを例として以下に表示します。\n\n\n生徒の氏名: %s\n年齢: %d\n性別: %s\n保護者名: %s\n保護者のメールアドレス: %s\n\n\n上記の内容が正しいか確認してください。フィールド名と内容が一致しない(例:生徒の氏名に年齢が表示されている)場合，読み込むCSVファイルの内容を修正してからもう一度読み込んでください。\n\n登録してもよろしいですか？" 
+                        % (len(students), students[0][0], int(students[0][1]), students[0][2], students[0][3], students[0][4]),
+                        title="登録の確認",
+                        keep_on_top=True,
+                        modal=True,
+                    ) == "Yes":
+                        reg_error = False # 登録エラーが発生したかどうか
+                        print("[Info] CSVファイルから生徒を登録しています...")
+                        for student in students:
+                            print("[Info] 登録中: %s" % student[0])
+                            if register_student(student[0], int(student[1]), student[2], student[3], student[4], without_card=True) != 0: # 生徒を登録
+                                sg.popup_ok(
+                                    "生徒の登録に失敗しました。このCSVファイルの生徒の登録は中止されました。",
+                                    title="エラー",
+                                    keep_on_top=True,
+                                    modal=True,
+                                )
+                                reg_error = True
+                                break
+                        if not reg_error:
+                            db.commit_database()
+                            print("[Info] CSVファイルからの生徒登録を完了しました。")
+                            sg.popup_ok(
+                                "%d名の生徒の登録を完了しました。\n現在登録された生徒には，ICカードがまだ割り当てられていません。これらの生徒にICカードを割り当てるには，メインウィンドウの「生徒を管理」セクションの「生徒にカードを割り当てる」を選択し，ICカードの割り当てを行ってください。" % len(students),
+                                title="完了",
+                                keep_on_top=True,
+                                modal=True,
+                            )
+                        else:
+                            continue
 
         ## 生徒除名ウィンドウ
         elif "remove_student" in windows and win == windows["remove_student"]:
@@ -337,7 +473,7 @@ def showgui_main():  # GUIを表示
                 now_processing_window.close()
                 
         ## ポップアウトされたシステム出力ウィンドウ
-        #! ポップアウトウィンドウをwindows側で閉じるとメインウィンドウに文字がでなくなるバグあり。原因不明。
+        ##! ポップアウトウィンドウをwindows側で閉じるとメインウィンドウに文字がでなくなるバグあり。原因不明。
         elif "poppped_system_log_window" in windows and win == windows["poppped_system_log_window"]:
             if event == sg.WIN_CLOSED or event is None:
                 win.hide()
@@ -348,6 +484,7 @@ def showgui_main():  # GUIを表示
 def end_process():  # 終了処理
     with open(const.SAVES_PATH, "wb") as f:
         pickle.dump(const.saves, f)
+            
                 
 def is_ok_to_open_window(windows: dict, force_open: bool = False):
     """
@@ -372,9 +509,56 @@ def is_ok_to_open_window(windows: dict, force_open: bool = False):
         return False
     else:
         return True
+    
+def send_mail(id = "", mode = "test"):  # 入室メールを送信
+    """
+    入室メールを送信します。
+
+    Args:
+        id (str): 入室した生徒のID
+        mode (str): 送信するメールの種類。"enter"または"exit"
+    """
+    if const.states["system"] == const.DISABLED:
+        print("[!!警告!!] 致命的なエラーです。システム無効化中に，メール送信が実行されようとしました。これはプログラム内の致命的なバグが発生したことを知らせるメッセージです。速やかに開発者に連絡し，修正してください。")
+        return -1
+    
+    if mode == "enter":
+        if ml.send(
+            db.execute_database("SELECT mail_address FROM parent WHERE id = '%s'" % id)[0][0],
+            const.saves["mail"]["enter"]["subject"].format(name = db.execute_database("SELECT name FROM student WHERE id = '%s'" % id)[0][0]),
+            const.saves["mail"]["enter"]["body"].format(name = db.execute_database("SELECT name FROM student WHERE id = '%s'" % id)[0][0]),
+        ) == -1:
+            print("[Error] メールの送信に失敗しました。")
+            return -1
+    elif mode == "exit":
+        if ml.send(
+            db.execute_database("SELECT mail_address FROM parent WHERE id = '%s'" % id)[0][0],
+            const.saves["mail"]["exit"]["subject"].format(name = db.execute_database("SELECT name FROM student WHERE id = '%s'" % id)[0][0]),
+            const.saves["mail"]["exit"]["body"].format(name = db.execute_database("SELECT name FROM student WHERE id = '%s'" % id)[0][0]),
+        ) == -1:
+            print("[Error] メールの送信に失敗しました。")
+            return -1
+    elif mode == "test":
+        if ml.send(
+            const.saves["mail"]["test_address"],
+            const.saves["mail"]["enter"]["subject"].format(name = "山田太郎"),
+            const.saves["mail"]["enter"]["body"].format(name = "山田太郎"),
+        ) == -1:
+            print("[Error] メールの送信に失敗しました。")
+            return -1
+        if ml.send(
+            const.saves["mail"]["test_address"],
+            const.saves["mail"]["exit"]["subject"].format(name = "山田太郎"),
+            const.saves["mail"]["exit"]["body"].format(name = "山田太郎"),
+        ) == -1:
+            print("[Error] メールの送信に失敗しました。")
+            return -1
+    else:
+        print("[Error] send_mail()のmode引数が不正です。")
+        return -1
 
 
-def run_attendance_process(id: str):  # 入退室処理を行う
+def run_attendance_process(id: str):
     """
     生徒の入退室処理を行います。出席状態を反転し，メールを送信します。
 
@@ -385,11 +569,11 @@ def run_attendance_process(id: str):  # 入退室処理を行う
         print("[!!警告!!] 致命的なエラーです。システム無効化中に，入退室プロセスが実行されようとしました。これはプロうグラム内の致命的なバグが発生したことを知らせるメッセージです。速やかに開発者に連絡し，修正してください。")
         return -1
 
-    print("[Info] 入退室プロセスを実行しています...")
-
     if not db.is_id_exists(id):
         print("[Error] このカードは登録されていないため，入退室処理は行われませんでした。")
         return -1
+    
+    const.wav_touched.play()  # タッチ音を再生
 
     attendance = db.execute_database(
         "SELECT attendance FROM student WHERE id = '%s'" % id
@@ -398,19 +582,24 @@ def run_attendance_process(id: str):  # 入退室処理を行う
     if attendance == "出席":
         if db.exit_room(id) == -1:  # 退室処理
             print("[Error] 退室処理に失敗しました。")
+        else:
+            send_mail(id, "exit")
     elif attendance == "退席":
         if db.enter_room(id) == -1:  # 入室処理
             print("[Error] 入室処理に失敗しました。")
+        else:
+            send_mail(id, "enter")
     else:
         print("[Error] データベース上の生徒の出席状況が不正です。")
         return -1
+    
 
 
 def register_student(
-    name: str, age: int, gender: str, parent_name: str, mail_address: str
+    name: str, age: int, gender: str, parent_name: str, mail_address: str, without_card: bool = False
 ):  # 生徒を登録
     """
-    生徒を登録します。
+    生徒を登録します。カードなしで登録する場合は，IDには一時的なIDが割り当てられます。
 
     Args:
         name (str): 登録する生徒の名前
@@ -418,41 +607,46 @@ def register_student(
         gender (str): 登録する生徒の性別
         parent_name (str): 登録する生徒の保護者の名前
         mail_address (str): 登録する生徒の保護者のメールアドレス
-    """
-    if (id := wait_card_popup("登録する生徒のカードをタッチしてください")) == -1:
-        sg.popup_ok("生徒の登録がキャンセルされました。", title="キャンセル", keep_on_top=True, modal=True)
-    else:
-        window = now_processing_popup()  # 処理中のポップアップを表示
+        without_card (bool): カードなしで登録するかどうか
         
-        data = {
-            "name": name,
-            "age": age,
-            "gender": gender,
-            "parent_name": parent_name,
-            "mail_address": mail_address,
-            "id": id,
-            "attendance": "退席",
-        }
-        ret = db.add_student_to_database(data)
-        window.close()
-        if ret == -1:
-            sg.popup_ok(
-                "生徒の登録に失敗しました。このカードは既に登録されています。このカードを別の生徒に割り当てるには，まずこのカードを所有する生徒の除名を行ってください。詳細は，システム出力を参照してください。",
-                title="登録エラー",
-                keep_on_top=True,
-                modal=True,
-            )
-        elif ret == -2:
-            sg.popup_ok(
-                "生徒の登録に失敗しました。詳細は，システム出力を参照してください。",
-                title="登録エラー",
-                keep_on_top=True,
-                modal=True,
-            )
-        else:
-            sg.popup_ok(
-                "生徒の登録を完了しました。: " + name, title="完了", keep_on_top=True, modal=True
-            )
+    Returns:
+        ret (int): 成功した場合は 0，失敗した場合はそれ以外を返す。
+    """
+    if not without_card: # カードありで登録する場合
+        if (id := wait_card_popup("登録する生徒のカードをタッチしてください")) == -1:
+            sg.popup_ok("生徒の登録がキャンセルされました。", title="キャンセル", keep_on_top=True, modal=True)
+            return -1
+    else:                # カードなしで登録する場合
+        id = "temp_" + str(uuid.uuid4()) # 一時的なIDを割り当てる
+
+    window = now_processing_popup()  # 処理中のポップアップを表示
+    
+    data = {
+        "name": name,
+        "age": age,
+        "gender": gender,
+        "parent_name": parent_name,
+        "mail_address": mail_address,
+        "id": id,
+        "attendance": "退席",
+    }
+    ret = db.add_student_to_database(data)
+    window.close()
+    if ret == -1:
+        sg.popup_ok(
+            "生徒の登録に失敗しました。このカードは既に登録されています。このカードを別の生徒に割り当てるには，まずこのカードを所有する生徒の除名を行ってください。詳細は，システム出力を参照してください。",
+            title="登録エラー",
+            keep_on_top=True,
+            modal=True,
+        )
+    elif ret == -2:
+        sg.popup_ok(
+            "生徒の登録に失敗しました。詳細は，システム出力を参照してください。",
+            title="登録エラー",
+            keep_on_top=True,
+            modal=True,
+        )
+    return ret
 
 
 def remove_student(name: str):
@@ -492,7 +686,7 @@ def remove_student(name: str):
                 "生徒の除名を完了しました。: " + name, title="完了", keep_on_top=True, modal=True
             )
 
-
+# TODO 未完成
 def remove_student_without_card(
     name: str, age: int, gender: str, parents_name: str, mail_address: str
 ):
@@ -507,36 +701,57 @@ def remove_student_without_card(
         mail_address (str): 除名する生徒の保護者のメールアドレス
     """
     students = db.execute_database(
-        "SELECT * FROM student natural join on student.id = parent.id"
+        "SELECT * FROM student join parent on student.id = parent.id"
     )
-    print(students)
+    if len(students) == 0:
+        sg.popup_ok(
+            "データベースに生徒の情報が登録されていません。",
+            title="除名エラー",
+            keep_on_top=True,
+            modal=True,
+        )
+        return -1
     for student in students:
         if (
-            student[0] == name
-            and student[1] == age
+            student[1] == name
             and student[2] == gender
-            and student[3] == parents_name
-            and student[4] == mail_address
+            and int(student[3]) == int(age)
+            and student[6] == parents_name
+            and student[7] == mail_address
         ):
-            id = student["id"]
-            sg.popup_yes_no(
-                "入力された情報に一致する生徒が見つかりました。: \n氏名: %s\n年齢: %s\n性別: %s\n保護者の氏名: %s\n保護者のメールアドレス: %s\n\nこの生徒を除名を実行してよろしいですか？"
-                % name,
+            if sg.popup_yes_no(
+                "入力された情報に一致する生徒が見つかりました。: \n\n氏名: %s\n年齢: %s\n性別: %s\n保護者の氏名: %s\n保護者のメールアドレス: %s\n\nこの生徒を除名を実行してよろしいですか？"
+                % (name,
                 age,
                 gender,
                 parents_name,
-                mail_address,
+                mail_address),
                 title="除名の確認",
                 keep_on_top=True,
                 modal=True,
+            ) == "Yes":
+                if db.remove_student_from_database(id, name) == -1:
+                    sg.popup_ok(
+                        "生徒の除名に失敗しました。このカードはデータベースに登録されていません。別のカードを試してください。詳細は，システム出力を参照してください。",
+                        title="エラー",
+                        keep_on_top=True,
+                        modal=True,
+                    )
+                    return -1
+                else:
+                    sg.popup_ok(
+                        "生徒の除名を完了しました。: " + name,
+                        title="完了",
+                        keep_on_top=True,
+                        modal=True,
+                    )
+        else:
+            sg.popup_ok(
+                "入力された情報に一致する生徒が見つかりませんでした。入力した情報が正しいか，もう一度確認してください",
+                title="除名エラー",
+                keep_on_top=True,
+                modal=True,
             )
-
-    sg.popup_ok(
-        "入力された情報に一致する生徒が見つからなかったため，除名できませんでした。入力した情報が正しいか，もう一度確認してください",
-        title="除名エラー",
-        keep_on_top=True,
-        modal=True,
-    )
 
 
 def init_system():  # 初期化
@@ -605,6 +820,15 @@ def popup_window(layout, duration=0):
 
 
 def now_processing_popup(message="処理中です..."):
+    """
+    処理中のポップアップを表示します。
+
+    Args:
+        message (str, optional): ポップアップに表示するメッセージ. Defaults to "処理中です...".
+
+    Returns:
+        window: sg.Window
+    """
     sg.theme("LightGrey1")
     layout = [
         [
