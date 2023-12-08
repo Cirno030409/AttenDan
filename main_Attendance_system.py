@@ -24,6 +24,7 @@ import windows.remove_student_without_card_window as remove_student_without_card
 import windows.splash_window as splash_window
 import windows.popped_system_log_window as popped_system_log_window
 import windows.register_student_from_csv_window as register_student_from_csv_window
+import windows.fullscreen_window as fullscreen_window
 import tqdm
 import uuid
 
@@ -48,9 +49,10 @@ def main():
 
 def showgui_main():  # GUIを表示 
     
-    # 変数の初期化
+    # トグルボタンの初期化
     toggles = {
-        "power": True,
+        "power": True, # 入退室処理の有効化トグル
+        "fullscreen": False, # フルスクリーンモードの有効化トグル
     }
 
     sg.theme("BluePurple")  # テーマをセット
@@ -116,11 +118,16 @@ def showgui_main():  # GUIを表示
                 end_process()  # 終了処理
                 sys.exit()
                         
-            ### トグル状態に応じてボタンのテキストを変更
-            if toggles["power"]:
+            ### トグル状態に応じてボタを変更
+            if toggles["power"]: # 入退室処理の有効化トグル
                 win["-power-"].update(text="入退室処理 有効", button_color="white on green")
             else:
                 win["-power-"].update(text="入退室処理 無効", button_color="white on red")
+                
+            if toggles["fullscreen"]: # フルスクリーンモードの有効化トグル
+                win["-toggle_fullscreen-"].update(text="待ち受け画面を非表示", button_color="black on pink")
+            else:
+                win["-toggle_fullscreen-"].update(text="待ち受け画面を表示", button_color="white on black")
 
             ### NFCの状態表示を更新
             if const.states["nfc"] == const.DISCONNECTED:
@@ -189,9 +196,30 @@ def showgui_main():  # GUIを表示
                         print(
                             "[Info] 現在の状態でNFCカードリーダにカードをタッチしても，入退室処理を行いません。カードをタッチしても安全です。"
                         )
+            ### 主な操作パネルのボタン
+            #### 待ち受け画面の表示・非表示
+            elif event == "-toggle_fullscreen-":
+                if not toggles["fullscreen"]:
+                    if const.states["system"] == const.DISABLED:
+                        sg.popup_ok(
+                            "待ち受け画面を表示するには，入退室処理を有効化してください。",
+                            title="エラー",
+                            keep_on_top=True,
+                            modal=True,
+                        )
+                        continue
+                    else:
+                        if "full_screen_window" in windows:
+                            windows["full_screen_window"].un_hide()
+                        else:
+                            windows["full_screen_window"] = fullscreen_window.get_window()
+                            windows["full_screen_window"].read(timeout=0)
+                else:
+                    windows["full_screen_window"].hide()
+                toggles["fullscreen"] = not toggles["fullscreen"]  # トグルの状態を反転
 
             ### データベース管理パネルのボタン
-            if event == "-show_all_students-":
+            elif event == "-show_all_students-":
                 print("---- 生徒一覧 ----")
                 print_formatted_list(db.execute_database("SELECT * FROM student join parent on student.id = parent.id"))
             elif event == "-show_all_system_logs-":

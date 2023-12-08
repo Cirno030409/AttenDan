@@ -31,9 +31,9 @@ def get_window():
         [
             [
                 sg.Button(
-                    "全画面待ち受けモードに切り替え",
+                    "待ち受け画面を表示",
                     size=(30, 2),
-                    key="-test-",
+                    key="-toggle_fullscreen-",
                     tooltip="全画面待ち受けモードに切り替えます",
                     button_color="black",
                     expand_x=True,
