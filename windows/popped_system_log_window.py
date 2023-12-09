@@ -23,25 +23,17 @@ def get_window():
                     text_color="light green",
                 )
             ],
-            [
-                sg.Button(
-                    "閉じる",
-                    expand_x=True,
-                    size=(10, 3),
-                    key="-close-",
-                    tooltip="ウィンドウを閉じます"
-                )
-            ],
         ],
     ]
 
     window = sg.Window(
-        "システム出力（ポップアウト） ※閉じる際は下部の閉じるボタンを使用してください",
+        "システム出力（ポップアウト）",
         layout,
         finalize=True,
         resizable=True,
-        size=(1000, 700),
-        disable_close=True,
+        size=(1000, 800),
+        # disable_close=True,
+        enable_close_attempted_event=True,
         # keep_on_top=True,
         # modal=True,
     )

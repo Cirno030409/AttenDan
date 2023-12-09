@@ -281,24 +281,24 @@ def exit_room(id: str):  # 退室処理
 
 
 def commit_database():
-    db.commit_database()
+    return db.commit_database()
 
 
 def disconnect_from_database():
-    db.disconnect_from_database()
+    return db.disconnect_from_database()
 
 
 def rollback_database():
-    db.rollback_database()
+    return db.rollback_database()
 
 
 def connect_to_database():
-    db.connect_to_database()
+    return db.connect_to_database()
 
 
 def execute_database(sql):
     return db.execute_database(sql)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__": # For Debug
     add_student_to_database({"name": "test", "age": "a", "gender": "b", "parent_name": "id001", "parent_address": "id001", "id": "id001"})

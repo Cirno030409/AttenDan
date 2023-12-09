@@ -7,7 +7,11 @@ class Database:
         self.dbname = "RoboDone_AttendanceSystem_Database.db"
 
     def connect_to_database(self):  # データベースを読み出す
-        self.conn = sqlite3.connect(self.dbname)
+        try:
+            self.conn = sqlite3.connect(self.dbname)
+        except Exception as e:
+            print("[Error] Database connection failed. :", e)
+            return -1
         self.cur = self.conn.cursor()
         print("[Database] connected.")
 
@@ -25,7 +29,7 @@ class Database:
             print("[Database] Executing command. -->", sql)
         try:
             self.cur.execute(sql)
-        except sqlite3.OperationalError as e:
+        except Exception as e:
             print("[Error] SQL command execution failed. :", e)
             return -1
         fetch = self.cur.fetchall()  # 実行結果を取得
@@ -34,14 +38,26 @@ class Database:
         return fetch
 
     def commit_database(self):
-        self.conn.commit()
+        try:
+            self.conn.commit()
+        except Exception as e:
+            print("[Error] Database commit failed. :", e)
+            return -1
         print("[Database] commited.")
 
     def rollback_database(self):
-        self.conn.rollback()
+        try:
+            self.conn.rollback()
+        except Exception as e:
+            print("[Error] Database rollback failed. :", e)
+            return -1
         print("[Database] rollbacked.")
 
     def disconnect_from_database(self):
-        self.cur.close()
+        try:
+            self.cur.close()
+        except Exception as e:
+            print("[Error] Database close failed. :", e)
+            return -1
         self.conn.close()
         print("[Database] disconnected.")

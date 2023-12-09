@@ -7,15 +7,19 @@ class CardReader:
     def connect_reader(self):
         try:
             self.clf = nfc.ContactlessFrontend("usb")
-        except IOError:
-            print("[NFC] reader not found.")
+        except Exception as e:
+            print("[NFC] reader not found.: ", e)
             return -1
         print("[NFC] reader connected.")
 
     def wait_for_card_touched(
         self,
     ):  # This func blocks called thread until card is touched.
-        tag = self.clf.connect(rdwr={"on-connect": lambda tag: False})
+        try:
+            tag = self.clf.connect(rdwr={"on-connect": lambda tag: False})
+        except Exception as e:
+            print("[NFC] an error has occured.: ", e)
+            return -1
         return binascii.hexlify(tag.identifier).decode()
 
     def disconnect_reader(self):

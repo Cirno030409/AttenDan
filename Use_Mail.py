@@ -19,7 +19,7 @@ class Mail:
         text = msg.as_string()
         try:
             self.server.sendmail(self.from_address, to_address, text)
-        except smtplib.SMTPRecipientsRefused as e:
+        except Exception as e:
             print("[Mail] sent failed. :", e)
             return -1
         print("[Mail] sent. :", to_address, subject, body)
@@ -30,7 +30,7 @@ class Mail:
         self.server.starttls()
         try:
             self.server.login(from_address, password)
-        except smtplib.SMTPAuthenticationError as e:
+        except Exception as e:
             print("[Mail] login failed. :", e)
             return -1
         print("[Mail] logged in. : ", from_address)
