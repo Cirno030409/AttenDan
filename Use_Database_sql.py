@@ -16,7 +16,7 @@ class Database:
         print("[Database] connected.")
 
     def execute_database(self, sql, debug=False):
-        """接続しているデータベースに対してSQLコマンドを実行する
+        """接続しているデータベースに対してSQLコマンドを実行する。実行結果がない場合，空のリストを返す。
 
         Args:
             sql (str): 実行するSQLコマンド

@@ -22,6 +22,7 @@ debug_msg = True
 # ファイルパス
 SPLASH_IMAGE_PATH = "images/splash_s.png" # スプラッシュ画面の画像
 SAVES_PATH = "saves/saved_values.pkl"  # 保存先のパス
+TOUCH_SOUND_PATH = "sounds/touch_beep.wav"  # タッチ時の音声ファイルのパス
 
 # Global variable
 nfc_data = {"id": "", "touched_flag": False}
@@ -45,9 +46,12 @@ saves = {
     }
 }
 
-wav_touched = sa.WaveObject.from_wave_file("sounds/touch_beep.wav")
+wav_touched = sa.WaveObject.from_wave_file(TOUCH_SOUND_PATH)
 
 # 現在時刻
+year = 0
+month = 0
+day = 0
 hour = 0
 minute = 0
 second = 0

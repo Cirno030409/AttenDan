@@ -1,14 +1,19 @@
 import PySimpleGUI as sg
+from PIL import Image
 
 import config.values as const
 
 
 def get_window():
+    # Get the size of the image
+    image = Image.open(const.SPLASH_IMAGE_PATH)
+    width, height = image.size
+
     layout = [
         [
             sg.Image(
                 filename=const.SPLASH_IMAGE_PATH,
-                size=(840, 480),
+                size=(width, height),
                 pad=((0, 0), (0, 0)),
                 expand_x=True,
                 expand_y=True,
@@ -21,7 +26,8 @@ def get_window():
         layout,
         no_titlebar=True,
         keep_on_top=True,
-        size=(840, 480),
+        size=(width, height),
+        margins=(0, 0),
     )
 
     return window
