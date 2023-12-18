@@ -55,23 +55,35 @@
   },
   {
    "optionDest": "datas",
-   "value": "C:/Users/taniy/Dropbox/\u30ed\u30dc\u56e3/AttenDan/AttenDan/images;resorces/images/"
+   "value": "C:/Users/taniy/Dropbox/\u30ed\u30dc\u56e3/AttenDan/AttenDan/images;resources/images/"
   },
   {
    "optionDest": "datas",
-   "value": "C:/Users/taniy/Dropbox/\u30ed\u30dc\u56e3/AttenDan/AttenDan/sounds;resorces/sounds/"
-  },
-  {
-   "optionDest": "datas",
-   "value": "C:/Users/taniy/Dropbox/\u30ed\u30dc\u56e3/AttenDan/AttenDan/saves;resorces/saves/"
-  },
-  {
-   "optionDest": "datas",
-   "value": "C:/Users/taniy/Dropbox/\u30ed\u30dc\u56e3/AttenDan/AttenDan/RoboDone_AttendanceSystem_Database.db;resorces/"
+   "value": "C:/Users/taniy/Dropbox/\u30ed\u30dc\u56e3/AttenDan/AttenDan/sounds;resources/sounds/"
   },
   {
    "optionDest": "hiddenimports",
    "value": "nfc.clf.rcs380"
+  },
+  {
+   "optionDest": "datas",
+   "value": "C:/Users/taniy/Dropbox/\u30ed\u30dc\u56e3/AttenDan/AttenDan/saves;resources/saves/"
+  },
+  {
+   "optionDest": "hiddenimports",
+   "value": "requests"
+  },
+  {
+   "optionDest": "datas",
+   "value": "C:/Users/taniy/Dropbox/\u30ed\u30dc\u56e3/AttenDan/AttenDan/updator/updator.exe;resources/"
+  },
+  {
+   "optionDest": "datas",
+   "value": "C:/Users/taniy/Dropbox/\u30ed\u30dc\u56e3/AttenDan/AttenDan/updator;updator/"
+  },
+  {
+   "optionDest": "datas",
+   "value": "C:/Users/taniy/Dropbox/\u30ed\u30dc\u56e3/AttenDan/AttenDan/system_values.json;resources/"
   }
  ],
  "nonPyinstallerOptions": {

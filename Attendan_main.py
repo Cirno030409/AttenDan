@@ -6,11 +6,11 @@ Author@ yuta tanimura
 import csv
 import datetime
 import os
-import pickle
 import sys
 import threading
 import uuid
 import ctypes
+import json
 
 import PySimpleGUI as sg
 
@@ -27,6 +27,7 @@ import windows.register_student_from_csv_window as register_student_from_csv_win
 import windows.remove_student_window as remove_student_window
 import windows.remove_student_without_card_window as remove_student_without_card_window
 import windows.splash_window as splash_window
+import updator.updator as updator
 
 ml = mm.Mail()
 windows = {}
@@ -52,25 +53,41 @@ def main():
     nfc.disconnect_reader()  # NFCリーダーを切断する
     ml.logout_smtp()  # SMTPサーバーからログアウトする
     
-def is_admin():
+def is_admin(): # 管理者権限を持っているかどうかを確認する
     try:
         return ctypes.windll.shell32.IsUserAnAdmin()
     except:
         return False
+    
+def check_for_update(): # アップデートがあるかどうかを確認する
+    ret = updator.is_exist_update() # アップデートがあるかどうかを確認
+    if ret != -1:
+        if updator.is_exist_update(): # アップデートがあるかどうかを確認
+            latest_ver, release_title, release_body, _ = updator.get_latest_release_info()
+            latest_ver_str = str(latest_ver)
+            latest_ver_str ="v" + latest_ver_str[0] + '.' + latest_ver_str[1] + '.' + latest_ver_str[2]
+            if sg.PopupYesNo(f'新しいバージョン {latest_ver_str} が見つかりました。アップデートの内容は以下の通りです。\n\n\n{release_title}\n\n{release_body}\n\n\n基本的に機能向上，セキュリティ向上のため，アップデートで最新版を使用することが推奨されます。\nアップデーターを起動し，アップデートしますか？', title='アップデート', keep_on_top=True) == 'Yes':
+                os.system("start updator.exe")
+                sys.exit()
+    else:
+        return ret
 
 
 def init_system():  # 初期化
     global init_error
     print("[Info] system initializing...")
+    
+    # 変数のロード
+    if os.path.exists(const.SAVES_PATH):
+        with open(const.SAVES_PATH, "rb") as f:
+            const.saves = json.load(f)
+            
+    if const.saves["system_unused"] == True: # 初回起動時の処理
+        pass
+    
+    check_for_update() # アップデートがあるかどうかを確認
 
-    # if os.name != "nt":
-    #     sg.popup_ok(
-    #         "本システムは，Windows以外での動作は保証されていません。Windows以外のプラットフォーム上での動作は，思いもよらぬ誤動作を招く可能性があります。",
-    #         title="警告",
-    #         keep_on_top=True,
-    #         modal=True,
-    #     )
-
+    
     if db.connect_to_database() == -1:  # データベースに接続する
         print("[Error] Couldn't connect to database.")
         init_error["database"] = "error"
@@ -129,27 +146,22 @@ def showgui_main():  # GUIを表示
 
     windows["main"] = main_window.get_window()  # メインwindowを取得
 
-    # 変数のロード
-    if os.path.exists(const.SAVES_PATH):
-        with open(const.SAVES_PATH, "rb") as f:
-            const.saves = pickle.load(f)
-
-        # メールの設定を反映
-        windows["main"]["-entered_mail_subject-"].update(
-            const.saves["mail"]["enter"]["subject"]
-        )
-        windows["main"]["-entered_mail_body-"].update(
-            const.saves["mail"]["enter"]["body"]
-        )
-        windows["main"]["-exited_mail_subject-"].update(
-            const.saves["mail"]["exit"]["subject"]
-        )
-        windows["main"]["-exited_mail_body-"].update(
-            const.saves["mail"]["exit"]["body"]
-        )
-        windows["main"]["-test_mail_address-"].update(
-            const.saves["mail"]["test_address"]
-        )
+    # メールの設定を反映
+    windows["main"]["-entered_mail_subject-"].update(
+        const.saves["mail"]["enter"]["subject"]
+    )
+    windows["main"]["-entered_mail_body-"].update(
+        const.saves["mail"]["enter"]["body"]
+    )
+    windows["main"]["-exited_mail_subject-"].update(
+        const.saves["mail"]["exit"]["subject"]
+    )
+    windows["main"]["-exited_mail_body-"].update(
+        const.saves["mail"]["exit"]["body"]
+    )
+    windows["main"]["-test_mail_address-"].update(
+        const.saves["mail"]["test_address"]
+    )
 
     windows["poppped_system_log_window"] = popped_system_log_window.get_window()
     windows["poppped_system_log_window"].hide()
@@ -241,7 +253,7 @@ def showgui_main():  # GUIを表示
                     windows.pop(list(windows.keys())[i])  # ウィンドウを削除
                     continue
 
-            ## メインウィンドウ
+            ##! メインウィンドウ
             if win == windows["main"]:
                 ### クローズボタンの処理
                 if event == sg.WIN_CLOSED or event is None:
@@ -366,22 +378,22 @@ def showgui_main():  # GUIを表示
                     toggles["fullscreen"] = not toggles["fullscreen"]  # トグルの状態を反転
 
                 ### データベース管理パネルのボタン
-                elif event == "-show_all_students-":
+                elif event == "-show_all_students-" or event == "生徒の一覧の表示":
                     print("---- 生徒一覧 ----")
                     print_formatted_list(
                         db.execute_database(
                             "SELECT * FROM student join parent on student.id = parent.id"
                         )
                     )
-                elif event == "-show_all_system_logs-":
+                elif event == "-show_all_system_logs-" or event == "システムログの表示":
                     print("---- システムログ ----")
                     print_formatted_list(
                         db.execute_database("SELECT * FROM system_log")
                     )
-                elif event == "-show_all_logs-":
+                elif event == "-show_all_logs-" or event == "入退室ログの表示":
                     print("---- 入退室ログ ----")
                     print_formatted_list(db.execute_database("SELECT * FROM log"))
-                elif event == "-add_student-":
+                elif event == "-add_student-" or event == "生徒の新規登録":
                     if const.states["system"] == const.DISABLED:
                         if not is_ok_to_open_window(windows):
                             continue
@@ -393,7 +405,7 @@ def showgui_main():  # GUIを表示
                             keep_on_top=True,
                             modal=True,
                         )
-                elif event == "-remove_student-":
+                elif event == "-remove_student-" or event == "生徒の除名":
                     if const.states["system"] == const.DISABLED:
                         if not is_ok_to_open_window(windows):
                             continue
@@ -406,9 +418,17 @@ def showgui_main():  # GUIを表示
                             modal=True,
                         )
                 elif event == "-assign_card_to_unassigned_student-":
-                    windows[
-                        "assign_card_to_student"
-                    ] = allocate_card_to_student_window.get_window()
+                    if const.states["system"] == const.DISABLED:
+                        windows[
+                            "assign_card_to_student"
+                        ] = allocate_card_to_student_window.get_window()
+                    else:
+                        sg.popup_ok(
+                            "生徒にカードを割り当てるには，入退室処理を無効化してください。有効化中にこの操作は行えません。",
+                            title="エラー",
+                            keep_on_top=True,
+                            modal=True,
+                        )
 
                 ### SQLの操作パネルのボタン
                 elif event == "-execute-":
@@ -469,6 +489,15 @@ def showgui_main():  # GUIを表示
                                 keep_on_top=True,
                                 modal=True,
                             )
+                            
+                ### バージョン情報
+                elif event == "バージョン情報":
+                    sg.popup_ok(
+                        const.SYSTEM_NAME + " v" + const.VERSION + "\n\n何か問題があれば，下記連絡先までご連絡ください。\n\n" + "開発者: 谷村悠太\ntaniymail@icloud.com",
+                        title="バージョン情報",
+                        keep_on_top=True,
+                        modal=True,
+                    )
 
                 #### メールの設定を保存
                 const.saves["mail"]["enter"]["subject"] = values[
@@ -478,6 +507,7 @@ def showgui_main():  # GUIを表示
                 const.saves["mail"]["exit"]["subject"] = values["-exited_mail_subject-"]
                 const.saves["mail"]["exit"]["body"] = values["-exited_mail_body-"]
                 const.saves["mail"]["test_address"] = values["-test_mail_address-"]
+                
 
             ## 生徒登録ウィンドウ
             elif "add_student" in windows and win == windows["add_student"]:
@@ -520,6 +550,45 @@ def showgui_main():  # GUIを表示
                     windows[
                         "register_student_from_csv"
                     ] = register_student_from_csv_window.get_window()
+                    
+                elif event == "-register_without_card-":
+                    if (
+                        values["-st_name-"] == ""
+                        or values["-st_age-"] == ""
+                        or values["-st_gender-"] == "未選択"
+                        or values["-st_parentsname-"] == ""
+                        or values["-st_mail_address-"] == ""
+                    ):
+                        sg.PopupOK(
+                            "登録するには，生徒の情報をすべて入力する必要があります。",
+                            title="生徒登録エラー",
+                            keep_on_top=True,
+                            modal=True,
+                        )
+                        continue
+                    if sg.popup_yes_no(
+                        "カードを使用せずに，生徒を登録しますか？\nカードを使用せずに登録した生徒は，後からカードの割り当てを行ってください。",
+                        title="生徒登録",
+                        keep_on_top=True,
+                        modal=True,
+                    ) == "Yes":
+                        register_student(
+                            values["-st_name-"],
+                            values["-st_age-"],
+                            values["-st_gender-"],
+                            values["-st_parentsname-"],
+                            values["-st_mail_address-"],
+                            without_card=True,
+                        )
+                        db.commit_database()
+                        sg.popup_ok(
+                            "生徒を登録しました。",
+                            title="完了",
+                            keep_on_top=True,
+                            modal=True,
+                        )
+                    else:
+                        continue
 
             ## CSVから生徒を登録ウィンドウ
             elif (
@@ -691,9 +760,31 @@ def showgui_main():  # GUIを表示
                 "assign_card_to_student" in windows
                 and win == windows["assign_card_to_student"]
             ):
-                if event == "-assign_card-":
-                    while how_many_unassigned_cards() != 0:
-                        register_student()
+                if len(values["-st_list-"]) == 0:
+                    win["-allocate_cards_to_students-"].update(disabled=True)
+                else:
+                    win["-allocate_cards_to_students-"].update(disabled=False)
+                    
+                if event == "-allocate_cards_to_students-":
+                    student = db.execute_database(
+                        f"SELECT * FROM student WHERE name='{values['-st_list-'][0]}'")
+                    id = student[0][0]
+                    name = student[0][1]
+                    gender = student[0][2]
+                    age = student[0][3]
+                    print(student)
+                    if (
+                        sg.popup_yes_no(
+                            f"以下の生徒にカードを割り当てます。よろしいですか？\n\n生徒の氏名: {name}\n性別: {gender}\n年齢: {age}\n",
+                            title="カード割り当ての確認",
+                            keep_on_top=True,
+                            modal=True,
+                        )
+                        == "Yes"
+                    ):
+                        if assign_card_to_student(id) != -1:
+                            db.commit_database()
+                            win.close()
 
             ## ポップアウトされたシステム出力ウィンドウ
             elif (
@@ -705,6 +796,7 @@ def showgui_main():  # GUIを表示
 
                 elif event == "-close-":
                     win.hide()
+                    
 
 
 def how_many_unassigned_cards():
@@ -722,8 +814,8 @@ def how_many_unassigned_cards():
 
 
 def end_process():  # 終了処理
-    with open(const.SAVES_PATH, "wb") as f:
-        pickle.dump(const.saves, f)
+    with open(const.SAVES_PATH, 'w') as f:
+        json.dump(const.saves, f)
 
 
 def is_ok_to_open_window(windows: dict):
@@ -764,22 +856,19 @@ def send_mail(id="", mode="test"):
             "[!!警告!!] 致命的なエラーです。システム無効化中に，メール送信が実行されようとしました。これはプログラム内の致命的なバグが発生したことを知らせるメッセージです。速やかに開発者に連絡し，修正してください。"
         )
         return -1
+    
+    name = db.execute_database("SELECT name FROM student WHERE id = '%s'" % id)[0][0]
+    address = db.execute_database("SELECT mail_address FROM parent WHERE id = '%s'" % id)[0][0]
 
     if mode == "enter":
         if (
             ml.send(
-                db.execute_database(
-                    "SELECT mail_address FROM parent WHERE id = '%s'" % id
-                )[0][0],
+                address,
                 const.saves["mail"]["enter"]["subject"].format(
-                    name=db.execute_database(
-                        "SELECT name FROM student WHERE id = '%s'" % id
-                    )[0][0]
+                    name=name
                 ),
                 const.saves["mail"]["enter"]["body"].format(
-                    name=db.execute_database(
-                        "SELECT name FROM student WHERE id = '%s'" % id
-                    )[0][0]
+                    name=name
                 ),
             )
             == -1
@@ -789,18 +878,12 @@ def send_mail(id="", mode="test"):
     elif mode == "exit":
         if (
             ml.send(
-                db.execute_database(
-                    "SELECT mail_address FROM parent WHERE id = '%s'" % id
-                )[0][0],
+                address,
                 const.saves["mail"]["exit"]["subject"].format(
-                    name=db.execute_database(
-                        "SELECT name FROM student WHERE id = '%s'" % id
-                    )[0][0]
+                    name=name
                 ),
                 const.saves["mail"]["exit"]["body"].format(
-                    name=db.execute_database(
-                        "SELECT name FROM student WHERE id = '%s'" % id
-                    )[0][0]
+                    name=name
                 ),
             )
             == -1
@@ -862,12 +945,12 @@ def run_attendance_process(id: str):
         if db.exit_room(id) == -1:  # 退室処理
             print("[Error] 退室処理に失敗しました。メールは送信されませんでした。")
         else:
-            send_mail(id, "exit")
+            send_mail(id, mode = "exit")
     elif attendance == "退席":
         if db.enter_room(id) == -1:  # 入室処理
             print("[Error] 入室処理に失敗しました。メールは送信されませんでした。")
         else:
-            send_mail(id, "enter")
+            send_mail(id, mode = "enter")
     else:
         print("[Error] データベース上の生徒の出席状態が不正です。")
         return -1
@@ -988,7 +1071,34 @@ def print_formatted_list(data: list):  # リストを整形して表示
 
 
 #! 生徒関連関数 ---------------------------------------------------------------------------------------------------------------------------
+def assign_card_to_student(tmp_id: str):
+    """
+    未割当の生徒にカードを割り当てます。
 
+    Args:
+        id (str): 割り当てるカードのID
+    """
+    if (id := wait_card_popup("登録する生徒のカードをタッチしてください")) == -1:
+        sg.popup_ok(
+            "生徒の登録がキャンセルされました。", title="キャンセル", keep_on_top=True, modal=True
+        )
+        return -1
+    if db.is_id_exists(id):
+        name = db.get_student_name(id)
+        sg.popup_ok(
+            f"このカードは既に登録されています。このカードに登録するには，既に登録されている生徒を除名してください。\n\n登録されている生徒: {name}", title="エラー", keep_on_top=True, modal=True
+        )
+        return -1
+    else:
+        if db.execute_database(f"UPDATE student SET id = '{id}' WHERE id = '{tmp_id}'") != 1:
+            if db.execute_database(f"UPDATE parent SET id = '{id}' WHERE id = '{tmp_id}'") != 1:
+                sg.popup_ok("カードの割り当てを完了しました。", title="完了", keep_on_top=True, modal=True)
+                return 0
+        else:
+            sg.popup_ok("カードの割り当てに失敗しました。", title="エラー", keep_on_top=True, modal=True)
+            
+    return -1
+        
 
 def register_student(
     name: str,
@@ -1020,6 +1130,7 @@ def register_student(
             return -1
     else:  # カードなしで登録する場合
         id = "temp_" + str(uuid.uuid4())  # 一時的なIDを割り当てる
+    
 
     window = now_processing_popup()  # 処理中のポップアップを表示
 
@@ -1156,8 +1267,12 @@ def remove_student_without_card(
 
 
 if __name__ == "__main__":
-    if is_admin():
-        main()
-    else:
-        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+    main()
+    # if is_admin():
+    #     main()
+    # else:
+    #     ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+    for thread in threading.enumerate():
+        if thread.is_alive() and thread is not threading.current_thread():
+            thread.join()
     sys.exit()

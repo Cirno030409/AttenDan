@@ -3,8 +3,9 @@ from functions import database_func as db
 
 
 def get_window():
-    st_list = db.execute_database("SELECT name FROM student WHERE id LIKE 'temp%'")
-    st_list = [str(i+1) + ". " + st[0] for i, st in enumerate(st_list)]
+    st_list = db.execute_database("SELECT name FROM student WHERE id LIKE 'temp%' ORDER BY name")
+    # st_list = [str(i+1) + ". " + st[0] for i, st in enumerate(st_list)]
+    st_list = [st[0] for st in st_list]
 
     
     layout = [

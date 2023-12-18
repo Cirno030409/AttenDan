@@ -386,7 +386,9 @@ def get_window():
 
     layout = [
         [
-            sg.Menu(menu_def)
+            sg.Menu(menu_def,
+                    tearoff=False,
+                    key="-menu-")
         ],
         [
             sg.Text(

@@ -4,7 +4,7 @@ import sqlite3
 
 class Database:
     def __init__(self):
-        self.dbname = "RoboDone_AttendanceSystem_Database.db"
+        self.dbname = "saves/RoboDone_AttendanceSystem_Database.db"
 
     def connect_to_database(self):  # データベースを読み出す
         try:

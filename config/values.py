@@ -1,7 +1,7 @@
 import simpleaudio as sa
+import json
 
 SYSTEM_NAME = "アテンダン"
-VERSION = "1.0.0"  # バージョン
 
 # システム状態の定数
 ENABLED = 1
@@ -21,7 +21,7 @@ debug_msg = True
 
 # ファイルパス
 SPLASH_IMAGE_PATH = "images/splash_s.png" # スプラッシュ画面の画像
-SAVES_PATH = "saves/saved_values.pkl"  # 保存先のパス
+SAVES_PATH = "saves/values.json"  # 保存先のパス
 TOUCH_SOUND_PATH = "sounds/touch_beep.wav"  # タッチ時の音声ファイルのパス
 
 # Global variable
@@ -31,20 +31,8 @@ id: NFCカードのID
 touched_flag: NFCカードがタッチされたかどうかを保持するフラグ（読みとったらFalseにする）
 """
 
-# 保存するデータ
-saves = {
-    "mail": {
-        "enter": {
-            "subject": "", 
-            "body": ""
-        },
-        "exit": {
-            "subject": "", 
-            "body": ""
-        },
-        "test_address": ""
-    }
-}
+with open("system_values.json", "r") as f:
+    VERSION = json.load(f)["system_version"]
 
 wav_touched = sa.WaveObject.from_wave_file(TOUCH_SOUND_PATH)
 
