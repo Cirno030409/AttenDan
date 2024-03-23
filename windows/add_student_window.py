@@ -112,17 +112,17 @@ def get_window():
         ],
         [
             sg.Button(
-                "CSVファイルから読み込んで登録...",
+                "カードをタッチして登録",
                 size=(50, 2),
-                key="-register_from_csv-",
-                tooltip="CSVファイルから生徒データを読み込んで登録します",
+                key="-register-",
+                tooltip="生徒を登録するときは，このボタンを押して，IDカードをかざします",
                 expand_x=True,
                 pad=((20, 20), (20, 0)),
             ),
         ],
         [
             sg.Button(
-                "カードを使用せずに登録する",
+                "カードを使用せずに登録",
                 size=(50, 2),
                 key="-register_without_card-",
                 tooltip="カードを使用せずに，とりあえず生徒を登録します",
@@ -132,12 +132,12 @@ def get_window():
         ],
         [
             sg.Button(
-                "カードをタッチして登録",
+                "CSVファイルから読み込んで登録...",
                 size=(50, 2),
-                key="-register-",
-                tooltip="生徒を登録するときは，このボタンを押して，IDカードをかざします",
+                key="-register_from_csv-",
+                tooltip="CSVファイルから生徒データを読み込んで登録します",
                 expand_x=True,
-                pad=((20, 20), (0, 0)),
+                pad=((20, 20), (20, 0)),
             ),
         ],
     ]

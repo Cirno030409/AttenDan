@@ -233,8 +233,9 @@ def get_window():
         expand_y=True,
     )
 
-    # カラムレイアウト
-    tab_main = [
+    #! タブの定義
+    tabs = {}
+    tabs["main"] = [
         [
             sg.Column(
                 [
@@ -254,8 +255,8 @@ def get_window():
         ],
     ]
 
-    # 送信するメールを設定するタブ
-    tab_entered_mail_mes_layout = [
+    #! 送信するメールを設定するタブ
+    tabs["set_mail_content_entered"] = [
         [
             sg.Text(
                 "件名:",
@@ -289,7 +290,7 @@ def get_window():
             ),
         ]
     ]
-    tab_exited_mail_mes_layout = [
+    tabs["set_mail_content_exited"] = [
         [
             sg.Text(
                 "件名:",
@@ -323,7 +324,7 @@ def get_window():
             ),
         ]
     ]
-    tab_set_mail_layout = [
+    tabs["set_mail_content"] = [
         [
             sg.Text("生徒が入退室したときに保護者に送信する通知メールの内容を設定します", justification="center", expand_x=True),
         ],
@@ -333,8 +334,8 @@ def get_window():
         [
             sg.TabGroup(
                 [
-                    [sg.Tab("入室時", tab_entered_mail_mes_layout)],
-                    [sg.Tab("退室時", tab_exited_mail_mes_layout)],
+                    [sg.Tab("入室時", tabs["set_mail_content_entered"])],
+                    [sg.Tab("退室時", tabs["set_mail_content_exited"])],
                 ],
                 expand_x=True,
                 expand_y=True,
@@ -358,29 +359,198 @@ def get_window():
         ]
     ]
     
-    # メニューの定義
+    frames = {}
+    frames["set1"] = sg.Frame(
+            "アカウント設定",
+            [
+                [
+                    sg.Text(
+                        "通知メール送信に使用するメールアドレス　　　",
+                        font=("Arial", 10),
+                        justification="left",
+                        pad=((10, 0), (20, 0)),
+                    ),
+                    sg.InputText(
+                        size=(50, 1),
+                        font=("Arial", 10),
+                        key="-mail_address-",
+                        pad=((10, 10), (20, 0)),
+                        expand_x=True,
+                    ),
+                ],
+                [
+                    sg.Text(
+                        "アテンダンからの情報を受け取るメールアドレス",
+                        font=("Arial", 10),
+                        justification="left",
+                        pad=((10, 0), (5, 0)),
+                    ),
+                    sg.InputText(
+                        size=(50, 1),
+                        font=("Arial", 10),
+                        key="-mail_address-",
+                        pad=((10, 10), (5, 0)),
+                        expand_x=True,
+                    ),
+                ],
+                [
+                    sg.Text(
+                        "入退室時に音を鳴らす",
+                        font=("Arial", 15),
+                        justification="left",
+                        pad=((0, 0), (0, 0)),
+                    ),
+                    sg.Checkbox(
+                        "",
+                        font=("Arial", 15),
+                        key="-sound-",
+                        pad=((0, 0), (0, 0)),
+                    ),
+                ],
+                [
+                    sg.Text(
+                        "入退室時に音を鳴らす",
+                        font=("Arial", 15),
+                        justification="left",
+                        pad=((0, 0), (0, 0)),
+                    ),
+                    sg.Checkbox(
+                        "",
+                        font=("Arial", 15),
+                        key="-sound-",
+                        pad=((0, 0), (0, 0)),
+                    ),
+                ],
+            ],
+            vertical_alignment="left",
+            expand_x=True,
+            # expand_y=True,
+    )
+    frames["set2"] = sg.Frame(
+            "システム設定",
+            [
+                [
+                    sg.Text(
+                        "通知メール送信に使用するメールアドレス　　　",
+                        font=("Arial", 10),
+                        justification="left",
+                        pad=((10, 0), (20, 0)),
+                    ),
+                    sg.InputText(
+                        size=(50, 1),
+                        font=("Arial", 10),
+                        key="-mail_address-",
+                        pad=((10, 10), (20, 0)),
+                        expand_x=True,
+                    ),
+                ],
+                [
+                    sg.Text(
+                        "アテンダンからの情報を受け取るメールアドレス",
+                        font=("Arial", 10),
+                        justification="left",
+                        pad=((10, 0), (5, 0)),
+                    ),
+                    sg.InputText(
+                        size=(50, 1),
+                        font=("Arial", 10),
+                        key="-mail_address-",
+                        pad=((10, 10), (5, 0)),
+                        expand_x=True,
+                    ),
+                ],
+                [
+                    sg.Text(
+                        "入退室時に音を鳴らす",
+                        font=("Arial", 15),
+                        justification="left",
+                        pad=((0, 0), (0, 0)),
+                    ),
+                    sg.Checkbox(
+                        "",
+                        font=("Arial", 15),
+                        key="-sound-",
+                        pad=((0, 0), (0, 0)),
+                    ),
+                ],
+                [
+                    sg.Text(
+                        "入退室時に音を鳴らす",
+                        font=("Arial", 15),
+                        justification="left",
+                        pad=((0, 0), (0, 0)),
+                    ),
+                    sg.Checkbox(
+                        "",
+                        font=("Arial", 15),
+                        key="-sound-",
+                        pad=((0, 0), (0, 0)),
+                    ),
+                ],
+            ],
+            vertical_alignment="left",
+            expand_x=True,
+            # expand_y=True,
+    )
+
+    scrollable_column = sg.Column(
+        [
+            [frames["set1"]],
+            [frames["set2"]],
+        ],
+        vertical_scroll_only=True,
+        scrollable=True,
+        expand_y=True,
+        expand_x=True,
+    )
+    tabs["system_setting"] = [
+        [
+            sg.Text("システムの設定を行います", justification="center", expand_x=True),
+        ],
+        [
+            scrollable_column,
+        ],
+    ]
+        
+    #! メニューの定義
     menu_def = [
         [
+            "システム操作", 
+            [
+                "入退出処理の有効化/無効化を切り替え",
+                "アテンダンを終了"
+            ]
+        ],
+        [
             "データベース操作", 
+            [
+                "生徒の管理",
                 [
-                    "生徒の管理",
-                    [
-                        "生徒の一覧の表示",
-                        "生徒の新規登録",
-                        "生徒の除名",
-                    ],
-                    "システムログ",
-                    [
-                        "入退室ログの表示",
-                        "システムログの表示",
-                    ],
-                ]
+                    "生徒の一覧の表示",
+                    "生徒の新規登録",
+                    "生徒の除名",
+                ],
+                "システムログ",
+                [
+                    "入退室ログの表示",
+                    "システムログの表示",
+                ],
+            ]
+        ],
+        [
+            "CSV出力",
+            [
+                "生徒の情報をCSV形式で出力",
+                "生徒とその保護者の情報をCSV形式で出力",
+                "入退室ログをCSV形式で出力",
+                "システムログをCSV形式で出力",
+            ]
         ],
         [
             "ヘルプ", 
-                [
-                    "バージョン情報"
-                ]
+            [
+                "バージョン情報",
+            ]
         ]
     ]
 
@@ -411,8 +581,9 @@ def get_window():
             sg.TabGroup(
                 [
                     [
-                        sg.Tab("コントロールパネル", tab_main),
-                        sg.Tab("メール内容の設定", tab_set_mail_layout),
+                        sg.Tab("メインパネル", tabs["main"]),
+                        sg.Tab("通知メール内容設定", tabs["set_mail_content"]),
+                        sg.Tab("システム設定", tabs["system_setting"])
                     ],
                 ],
                 expand_x=True,
@@ -426,7 +597,7 @@ def get_window():
         layout,
         resizable=False,
         finalize=True,
-        size=(1300, 750),
+        size=(1270, 710),
         return_keyboard_events=True,
     )
 

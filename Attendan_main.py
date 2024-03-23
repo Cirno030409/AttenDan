@@ -11,14 +11,17 @@ import threading
 import uuid
 import ctypes
 import json
-
+import ctypes
 import PySimpleGUI as sg
+import time
+
 
 import config.values as const
 import functions.database_func as db
 import functions.nfc_func as nfc
 import Use_Mail as mm
 import windows.add_student_window as add_student_window
+import windows.welcome_window as welcome_window
 import windows.allocate_card_to_student_window as allocate_card_to_student_window
 import windows.full_screen_window as full_screen_window
 import windows.main_window as main_window
@@ -28,6 +31,7 @@ import windows.remove_student_window as remove_student_window
 import windows.remove_student_without_card_window as remove_student_without_card_window
 import windows.splash_window as splash_window
 import updator.updator as updator
+import subprocess
 
 ml = mm.Mail()
 windows = {}
@@ -40,10 +44,7 @@ init_error = {
 
 
 def main():
-    window = splash_window.get_window()
-    window.read(timeout=0)
     init_system()  # 初期化
-    window.close()
     showgui_main()  # GUIを表示
 
     # システム終了処理
@@ -60,20 +61,39 @@ def is_admin(): # 管理者権限を持っているかどうかを確認する
         return False
     
 def check_for_update(): # アップデートがあるかどうかを確認する
+    """
+    アップデートがあるかどうかを確認する。存在すれば，更新を行う。
+        
+    Returns:
+        bool: アップデートがある場合はTrue，ない場合はFalse
+    """
     ret = updator.is_exist_update() # アップデートがあるかどうかを確認
     if ret != -1:
-        if updator.is_exist_update(): # アップデートがあるかどうかを確認
+        if ret: # アップデートがあるかどうかを確認
             latest_ver, release_title, release_body, _ = updator.get_latest_release_info()
             latest_ver_str = str(latest_ver)
             latest_ver_str ="v" + latest_ver_str[0] + '.' + latest_ver_str[1] + '.' + latest_ver_str[2]
-            if sg.PopupYesNo(f'新しいバージョン {latest_ver_str} が見つかりました。アップデートの内容は以下の通りです。\n\n\n{release_title}\n\n{release_body}\n\n\n基本的に機能向上，セキュリティ向上のため，アップデートで最新版を使用することが推奨されます。\nアップデーターを起動し，アップデートしますか？', title='アップデート', keep_on_top=True) == 'Yes':
-                os.system("start updator.exe")
-                sys.exit()
+            sg.Popup(
+                f'新しいバージョン {latest_ver_str} が利用可能になりました。\nアップデートには，バグ修正，機能追加などの重要な要素が含まれています。\nアップデートの内容は以下の通りです。\n\n\n{release_title}\n\n{release_body}\n\n\nOKボタンをクリックすると，アップデーターが起動されます。アップデーターが起動したら，Yesボタンをクリックしてアップデートを実行してください.\n', 
+                title=f'{latest_ver_str} が利用可能', keep_on_top=True)
+            os.system("start updator.exe")
+            sys.exit()
     else:
         return ret
+    
+def is_shift_pressed():
+    """
+    シフトキーが押されているかどうかをチェックする
 
+    Returns:
+        bool: シフトキーが押されている場合はTrue、そうでない場合はFalse
+    """
+    return ctypes.windll.user32.GetKeyState(0x10) & 0x8000 != 0 
 
 def init_system():  # 初期化
+    window = splash_window.get_window()
+    window.read(timeout=0)
+
     global init_error
     print("[Info] system initializing...")
     
@@ -82,10 +102,86 @@ def init_system():  # 初期化
         with open(const.SAVES_PATH, "rb") as f:
             const.saves = json.load(f)
             
-    if const.saves["system_unused"] == True: # 初回起動時の処理
-        pass
-    
     check_for_update() # アップデートがあるかどうかを確認
+
+
+    if const.saves["system_unused"] == True or is_shift_pressed(): # 初回起動時の処理
+        window.close()
+        window = welcome_window.get_window()
+        while True:
+            event, values = window.read()
+            if event == "-next_to_driver-":
+                window.close()
+                layout = welcome_window.get_driver_install_window()
+                window = sg.Window("ICカードリーダドライバのインストール", layout, size=(800, 500))
+            elif event == "-next_to_driver2-":
+                window.close()
+                layout = welcome_window.get_driver_install_window2()
+                window = sg.Window("ICカードリーダドライバのインストール", layout, size=(1200, 700))
+            elif event == "-next_to_1-":
+                window.close()
+                layout = welcome_window.get_layout1()
+                window = sg.Window("アテンダンへようこそ", layout, size=(1000, 750))
+            elif event == "-next_to_2-":
+                window.close()
+                layout = welcome_window.get_layout2()
+                window = sg.Window("アテンダンへようこそ", layout, size=(1000, 750))
+            elif event == "-next_to_3-":
+                window.close()
+                layout = welcome_window.get_layout3()
+                window = sg.Window("アテンダンへようこそ", layout, size=(1000, 750))
+            elif event == "-next_to_4-":
+                if values["-gmail-"] == "" or values["-password-"] == "":
+                    sg.popup_ok("Gmailアドレスとパスワードを両方入力してください。", title="エラー", keep_on_top=True, modal=True)
+                    continue
+                elif values["-gmail-"].find("@") == -1 or values["-gmail-"].find(".") == -1:
+                    sg.popup_ok("通知用メールアドレスを正しく入力してください", title="エラー", keep_on_top=True, modal=True)
+                    continue
+                window.close()
+                layout = welcome_window.get_layout4()
+                window = sg.Window("アテンダンへようこそ", layout, size=(1000, 750))
+            elif event == "-next_to_finish-":
+                if values["-emergency_mail-"] == "":
+                    sg.popup_ok("通知用メールアドレスを入力してください", title="エラー", keep_on_top=True, modal=True)
+                    continue
+                elif values["-emergency_mail-"].find("@") == -1 or values["-emergency_mail-"].find(".") == -1:
+                    sg.popup_ok("通知用メールアドレスを正しく入力してください", title="エラー", keep_on_top=True, modal=True)
+                    continue
+                window.close()
+                layout = welcome_window.get_layout_finish()
+                window = sg.Window("アテンダンへようこそ", layout, size=(1000, 750))
+            elif event == "-close-":
+                const.saves["system_unused"] = False
+                window.close()
+                break
+            elif event == "-back_to_1-":
+                window.close()
+                layout = welcome_window.get_layout1()
+                window = sg.Window("アテンダンへようこそ", layout, size=(1000, 750))  
+            elif event == "-back_to_2-":
+                window.close()
+                layout = welcome_window.get_layout2()
+                window = sg.Window("アテンダンへようこそ", layout, size=(1000, 750))
+            elif event == "-back_to_3-":
+                window.close()
+                layout = welcome_window.get_layout3()
+                window = sg.Window("アテンダンへようこそ", layout, size=(1000, 750))
+            elif event == "-back_to_4-":
+                window.close()
+                layout = welcome_window.get_layout4()
+                window = sg.Window("アテンダンへようこそ", layout, size=(1000, 750))
+            elif event == "-LINK-":
+                import webbrowser
+                webbrowser.open('https://support.google.com/accounts/answer/185833?hl=ja')  
+                
+            elif event == sg.WINDOW_CLOSED:
+                window.close()
+                sys.exit()
+            
+
+        window.close()
+
+
 
     
     if db.connect_to_database() == -1:  # データベースに接続する
@@ -99,7 +195,7 @@ def init_system():  # 初期化
         )
 
     if (
-        ml.login_smtp("robotomiline@gmail.com", "gzmt tjim egtb fwad") == -1
+        ml.login_smtp(const.saves["mail"]["from"], const.saves["mail"]["password"]) == -1
     ):                                  # SMTPサーバーにログイン
         print("[Error] Couldn't login to SMTP server.")
         init_error["smtp"] = "error"
@@ -130,6 +226,7 @@ def init_system():  # 初期化
 
     db.add_systemlog_to_database("システム起動")  # システムログに記録
     print("[Info] system initialized.")
+    window.close()
     return init_error
 
 
@@ -147,26 +244,13 @@ def showgui_main():  # GUIを表示
     windows["main"] = main_window.get_window()  # メインwindowを取得
 
     # メールの設定を反映
-    windows["main"]["-entered_mail_subject-"].update(
-        const.saves["mail"]["enter"]["subject"]
-    )
-    windows["main"]["-entered_mail_body-"].update(
-        const.saves["mail"]["enter"]["body"]
-    )
-    windows["main"]["-exited_mail_subject-"].update(
-        const.saves["mail"]["exit"]["subject"]
-    )
-    windows["main"]["-exited_mail_body-"].update(
-        const.saves["mail"]["exit"]["body"]
-    )
-    windows["main"]["-test_mail_address-"].update(
-        const.saves["mail"]["test_address"]
-    )
+    load_settings(windows)
+
 
     windows["poppped_system_log_window"] = popped_system_log_window.get_window()
     windows["poppped_system_log_window"].hide()
 
-    #! 起動時のメッセージ
+    # 起動時のメッセージ
     print(
         "=======    Welcome to "
         + const.SYSTEM_NAME
@@ -174,48 +258,18 @@ def showgui_main():  # GUIを表示
         + const.VERSION
         + "   ======="
     )
+    
+    check_init_error(init_error) # 起動時のエラーチェック
 
-    if (num := how_many_unassigned_cards()) != 0:
-        print(
-            "[Warning] カード未割り当ての生徒が "
-            + str(num)
-            + " 名います。「生徒にカードを割り当てる」ボタンより，カードの割り当てを行ってください。"
-        )
 
-    if init_error["database"] != "":
-        print(
-            "[Warning] データベースに接続できませんでした。データベースファイルが存在することを確認してください。また，システム管理者に問い合わせてください。: ", init_error["database"]
-        )
-
-    if init_error["smtp"] != "":
-        print(
-            "[Warning] SMTPサーバーにログインできませんでした。ネットワーク接続または，ログインするアカウント設定を確認してください。また，システム管理者に問い合わせてください。: ", init_error["smtp"]
-        )
-
-    if init_error["nfc"] != "":
-        print(
-            "[Warning] NFCカードリーダに接続できませんでした。NFCカードリーダが正常に接続されていることを確認してから，システムを再起動してください。: ", init_error["nfc"]
-        )
-
-    if const.states["nfc"] == const.DISCONNECTED:
-        print(
-            "[Info] NFCカードリーダが接続されていません。入退室処理を有効化するには，NFCカードリーダが正常に接続されていることを確認し，システムを再起動してください。: ", init_error["nfc"]
-        )
-        
-    const.day = datetime.datetime.now().day  # 日付を取得
-
-    # メインループ ====================================================================================================
+    #! メインループ ====================================================================================================
     while True:
         # ウィンドウ表示
 
         sg.theme("BluePurple")  # テーマをセット
 
-        # 更新
-        ## 日付が変わったら，生徒の出席状況をリセット
-        if const.day != datetime.datetime.now().day:
-            db.execute_database("UPDATE student SET attendance = '退席'")
-            db.commit_database()
-            print("[Info] 日付が変わったので，全生徒の出席状態を '退席' に変更しました。")
+        # 更新処理
+
         ## 現在時刻を取得
         const.year = datetime.datetime.now().year
         const.month = datetime.datetime.now().month
@@ -224,6 +278,16 @@ def showgui_main():  # GUIを表示
         const.minute = datetime.datetime.now().minute
         const.second = datetime.datetime.now().second
         
+        ## 日付が変わったら，生徒の出席状況をリセット
+        threading.Thread(target=reset_attendance_status).start()
+        
+        ## 別スレッドで発生した例外をキャッチ
+        if len(const.exceptions) > 0:
+            for i, e in const.exceptions:
+                print (e)
+                const.exceptions.pop(i)
+                
+        
         ## NFCのカードのタッチを確認
         if (
             const.states["nfc"] == const.CONNECTED  # NFCカードリーダが接続されている
@@ -231,27 +295,44 @@ def showgui_main():  # GUIを表示
         ):
             if (id := nfc.check_nfc_was_touched()) != -1:  # NFCカードがタッチされたかどうかを確認
                 print("[Info] 入退室プロセスを実行しています...")
-                run_attendance_process(id)  #! 入退室処理を行う
+                if run_attendance_process(id, windows) == -1:  # 入退室処理
+                    print("[Error] 入退室処理に失敗しました")
+                    const.wav["error"].play() # エラー音を再生
+                else:
+                    const.wav["touched"].play() # タッチ音を再生
         else:
             const.nfc_data[
                 "touched_flag"
-            ] = False  # システムが有効化されたときに，遅れてカードが反応しないように常にFalseにする
-
+            ] = False  # システムが無効化中は，常にフラグをFalseにしておく
+            
         ##! システムの状態をトグルボタンに反映
         if const.states["system"] == const.ENABLED:
             toggles["power"] = True
         elif const.states["system"] == const.DISABLED:
             toggles["power"] = False
-
+            
         for i, win in enumerate(list(windows.values())):  # すべてのウィンドウに対して更新
             event, values = win.read(timeout=0)
-
+            
             ## メインウィンドウ以外のウィンドウの終了処理
             if win != windows["main"]:
                 if event == sg.WIN_CLOSED or event is None:
-                    win.close()  # ウィンドウを閉じる
-                    windows.pop(list(windows.keys())[i])  # ウィンドウを削除
-                    continue
+                    if "full_screen_window" in windows and win == windows["full_screen_window"]:
+                        toggles["fullscreen"] = False
+                        windows.pop("full_screen_window")
+                    else:
+                        win.close()  # ウィンドウを閉じる
+                        windows.pop(list(windows.keys())[i])  # ウィンドウを削除
+                        continue
+                    
+                if "full_screen_window" in windows and win == windows["full_screen_window"]:
+                    if win["-greeting-"].get() != "こんにちは！":
+                        if "greeting" not in const.timers:
+                            const.timers["greeting"] = int(time.time())
+                        else:
+                            if int(time.time()) - const.timers["greeting"] > 20:
+                                win["-greeting-"].update("こんにちは！")
+                                const.timers.pop("greeting")
 
             ##! メインウィンドウ
             if win == windows["main"]:
@@ -292,15 +373,15 @@ def showgui_main():  # GUIを表示
                 if const.states["nfc"] == const.DISCONNECTED:
                     win["-nfcstate-"].update(
                         "NFCカードリーダが接続されていません",
-                        background_color="red",
-                        text_color="white",
+                        background_color="yellow",
+                        text_color="black",
                     )
                 elif (
                     const.states["nfc"] == const.CONNECTED
                     and const.states["system"] == const.ENABLED
                 ):
                     win["-nfcstate-"].update(
-                        "カードをタッチすると，生徒の入退室処理が実行されます",
+                        "現在カードをタッチすると，生徒の入退室処理が実行されます",
                         background_color="green",
                         text_color="white",
                     )
@@ -309,52 +390,16 @@ def showgui_main():  # GUIを表示
                     and const.states["system"] == const.DISABLED
                 ):
                     win["-nfcstate-"].update(
-                        "カードをタッチしても，入退室処理を行いません",
-                        background_color="yellow",
-                        text_color="black",
+                        "現在カードをタッチしても，入退室処理を行いません",
+                        background_color="red",
+                        text_color="white",
                     )
 
                 ###! システム状態切り替えトグルボタン
                 if event == "-power-":
-                    toggles["power"] = not toggles["power"]  # トグルの状態を反転
-                    if toggles["power"]:
-                        if const.states["nfc"] == const.DISCONNECTED:
-                            sg.popup_ok(
-                                "入退室処理を有効化できません。有効化するには，NFCカードリーダが正常に接続されていることを確認し，システムを再起動してください。",
-                                title="システムエラー",
-                                keep_on_top=True,
-                                modal=True,
-                            )
-                            toggles["power"] = not toggles["power"]  # トグルの状態を元に戻す
-                            continue
-                        if (
-                            sg.popup_yes_no(
-                                "入退室処理を有効化すると，カードがタッチされると生徒の入退室処理が実行されるようになります。よろしいですか？",
-                                title="システム有効化の確認",
-                                keep_on_top=True,
-                                modal=True,
-                            )
-                            == "Yes"
-                        ):
-                            const.states["system"] = const.ENABLED  # 入退室処理を有効化
-                            print("[Info] 入退室処理が有効化されました")
-                            if const.states["nfc"] == const.CONNECTED:
-                                print(
-                                    "[Attention] 現在の状態でNFCカードリーダにカードをタッチすると，生徒の入退室処理が実行されます。これは，タッチされたカードの生徒の保護者へのメール送信などが行われることを意味します。不用意にカード操作を行わないようにしてください。"
-                                )
-                    else:
-                        const.states["system"] = const.DISABLED  # システムを無効化
-                        toggles["fullscreen"] = False  # フルスクリーンモードを無効化
-                        if "full_screen_window" in windows:
-                            windows["full_screen_window"].hide()
-                            windows.pop("full_screen_window")
-                        print("[Info] 入退室処理が無効化されました")
-                        if const.states["nfc"] == const.CONNECTED:
-                            print(
-                                "[Info] 現在の状態でNFCカードリーダにカードをタッチしても，入退室処理を行いません。カードをタッチしても安全です。"
-                            )
-                ### 主な操作パネルのボタン
-                #### 待ち受け画面の表示・非表示
+                    toggles = toggle_power(toggles)  # システムの有効化・無効化を切り替える
+                ###! 主な操作パネルのボタン
+                ### 待ち受け画面の表示・非表示
                 elif event == "-toggle_fullscreen-":
                     if not toggles["fullscreen"]:
                         if const.states["system"] == const.DISABLED:
@@ -489,17 +534,44 @@ def showgui_main():  # GUIを表示
                                 keep_on_top=True,
                                 modal=True,
                             )
-                            
+                ###! メニューバー            
                 ### バージョン情報
                 elif event == "バージョン情報":
                     sg.popup_ok(
-                        const.SYSTEM_NAME + " v" + const.VERSION + "\n\n何か問題があれば，下記連絡先までご連絡ください。\n\n" + "開発者: 谷村悠太\ntaniymail@icloud.com",
+                        const.SYSTEM_NAME + " v" + const.VERSION + "\n\n" + const.RELEASE_NOTES + "\n\n何か問題があれば，下記連絡先までご連絡ください。\n\n" + "開発者: 谷村悠太\ntaniymail@icloud.com",
                         title="バージョン情報",
                         keep_on_top=True,
                         modal=True,
                     )
+                    
+                elif event == "生徒の情報をCSV形式で出力":
+                    output_students_list_as_csv()
+                    
+                elif event == "生徒とその保護者の情報をCSV形式で出力":
+                    output_students_and_parents_list_as_csv()
+                    
+                elif event == "入退室ログをCSV形式で出力":
+                    output_attendance_log_as_csv()
+                    
+                elif event == "システムログをCSV形式で出力":
+                    output_system_log_as_csv()
+                    
+                elif event == "アップデートの確認":
+                    if not check_for_update():
+                        sg.popup_ok(
+                            const.SYSTEM_NAME + "は，最新版です。",
+                            title="アップデートの確認",
+                            keep_on_top=True,
+                            modal=True,
+                        )
+                        
+                elif event == "入退出処理の有効化/無効化を切り替え":
+                    toggles = toggle_power(toggles)
+                    
+                elif event == "アテンダンを終了":
+                    end_process()
 
-                #### メールの設定を保存
+                ### メールの設定を保存
                 const.saves["mail"]["enter"]["subject"] = values[
                     "-entered_mail_subject-"
                 ]
@@ -508,7 +580,7 @@ def showgui_main():  # GUIを表示
                 const.saves["mail"]["exit"]["body"] = values["-exited_mail_body-"]
                 const.saves["mail"]["test_address"] = values["-test_mail_address-"]
                 
-
+            ##! ウィンドウ処理
             ## 生徒登録ウィンドウ
             elif "add_student" in windows and win == windows["add_student"]:
                 if event == "-register-":
@@ -772,7 +844,6 @@ def showgui_main():  # GUIを表示
                     name = student[0][1]
                     gender = student[0][2]
                     age = student[0][3]
-                    print(student)
                     if (
                         sg.popup_yes_no(
                             f"以下の生徒にカードを割り当てます。よろしいですか？\n\n生徒の氏名: {name}\n性別: {gender}\n年齢: {age}\n",
@@ -797,7 +868,249 @@ def showgui_main():  # GUIを表示
                 elif event == "-close-":
                     win.hide()
                     
+def check_init_error(init_error):
+    if (num := how_many_unassigned_cards()) != 0:
+        print(
+            "[Warning] カード未割り当ての生徒が "
+            + str(num)
+            + " 名います。「生徒にカードを割り当てる」ボタンより，カードの割り当てを行ってください。"
+        )
 
+    if init_error["database"] != "":
+        print(
+            "[Warning] データベースに接続できませんでした。データベースファイルが存在することを確認してください。また，システム管理者に問い合わせてください。: ", init_error["database"]
+        )
+
+    if init_error["smtp"] != "":
+        print(
+            "[Warning] SMTPサーバーにログインできませんでした。ネットワーク接続または，ログインするアカウント設定を確認してください。また，システム管理者に問い合わせてください。: ", init_error["smtp"]
+        )
+
+    if init_error["nfc"] != "":
+        print(
+            "[Warning] NFCカードリーダに接続できませんでした。NFCカードリーダが正常に接続されていることを確認してから，システムを再起動してください。: ", init_error["nfc"]
+        )
+
+    if const.states["nfc"] == const.DISCONNECTED:
+        print(
+            "[Info] NFCカードリーダが接続されていません。入退室処理を有効化するには，NFCカードリーダが正常に接続されていることを確認し，システムを再起動してください。: ", init_error["nfc"]
+        )
+
+
+def load_settings(windows):
+    """
+    設定データをロードします。
+
+    Args:
+        windows (dict): ウィンドウを保持する辞書
+    """
+    windows["main"]["-entered_mail_subject-"].update(
+        const.saves["mail"]["enter"]["subject"]
+    )
+    windows["main"]["-entered_mail_body-"].update(
+        const.saves["mail"]["enter"]["body"]
+    )
+    windows["main"]["-exited_mail_subject-"].update(
+        const.saves["mail"]["exit"]["subject"]
+    )
+    windows["main"]["-exited_mail_body-"].update(
+        const.saves["mail"]["exit"]["body"]
+    )
+    windows["main"]["-test_mail_address-"].update(
+        const.saves["mail"]["test_address"]
+    )
+    
+def reset_fullscreen_window_mes(window):
+    window["-greeting-"].update("こんにちは！")
+    print("reset!!!!!")
+                    
+def reset_attendance_status():
+    """
+    日付が変わったら，すべての生徒の出席状態を '退席' に変更します。
+    """
+    current_day = datetime.datetime.now().day
+    while True:
+        time.sleep(60)  # 60秒ごとに日付をチェック
+        new_day = datetime.datetime.now().day
+        if new_day != current_day:
+            print("日付が変わりました。")
+            db.execute_database("UPDATE student SET attendance = '退席'")
+            db.commit_database()
+            print("[Info] 日付が変わったので，全生徒の出席状態を '退席' に変更しました。")
+            current_day = new_day
+
+                    
+def toggle_power(toggles):
+    """
+    システムの有効化/無効化を切り替えます。
+    
+    Args:
+        toggles (dict): トグル状態を保持する変数
+        
+    Returns:
+        toggles (dict): トグル状態を保持する変数
+    """
+    toggles["power"] = not toggles["power"]  # トグルの状態を反転
+    if toggles["power"]:
+        if const.states["nfc"] == const.DISCONNECTED:
+            sg.popup_ok(
+                "入退室処理を有効化できません。有効化するには，NFCカードリーダが正常に接続されていることを確認し，システムを再起動してください。",
+                title="システムエラー",
+                keep_on_top=True,
+                modal=True,
+            )
+            toggles["power"] = not toggles["power"]  # トグルの状態を元に戻す
+            return toggles
+        if (
+            sg.popup_yes_no(
+                "入退室処理を有効化すると，カードがタッチされると生徒の入退室処理が実行され，保護者へのメール送信等の操作が実行される状態になります。カードリーダの近くにカードがないことを確認してください。有効化してもよろしいですか？",
+                title="システム有効化の確認",
+                keep_on_top=True,
+                modal=True,
+            )
+            == "Yes"
+        ):
+            const.states["system"] = const.ENABLED  # 入退室処理を有効化
+            print("[Info] 入退室処理が有効化されました")
+            if const.states["nfc"] == const.CONNECTED:
+                print(
+                    "[Attention] 現在の状態でNFCカードリーダにカードをタッチすると，生徒の入退室処理が実行されます。これは，タッチされたカードの生徒の保護者へのメール送信などが行われることを意味します。不用意にカード操作を行わないようにしてください。"
+                )
+    else:
+        const.states["system"] = const.DISABLED  # システムを無効化
+        toggles["fullscreen"] = False  # フルスクリーンモードを無効化
+        if "full_screen_window" in windows:
+            windows["full_screen_window"].hide()
+            windows.pop("full_screen_window")
+        print("[Info] 入退室処理が無効化されました")
+        if const.states["nfc"] == const.CONNECTED:
+            print(
+                "[Info] 現在の状態でNFCカードリーダにカードをタッチしても，入退室処理を行いません。カードをタッチしても安全です。"
+            )
+    return toggles
+    
+def output_students_list_as_csv():
+    """
+    生徒の情報をCSVファイルとして出力します。
+
+    Returns:
+        ret (bool): 保存が成功したかどうか
+    """
+    st_list = db.execute_database(
+        "SELECT * FROM student"
+    )
+    data = ""
+    for student in st_list:
+        for n, i in enumerate(student):
+            if n == 0:
+                data = data + str(i)
+            else:
+                data = data + "," + str(i)
+        data = data + "\n"
+    
+    if save_as_csv(data):
+        return True
+    else:
+        return False
+    
+def output_students_and_parents_list_as_csv():
+    """
+    生徒と保護者の情報をCSVファイルとして出力します。
+
+    Returns:
+        ret (bool): 保存が成功したかどうか
+    """
+    st_list = db.execute_database(
+        "SELECT student.*,  FROM student join parent on student.id = parent.id"
+    )
+    data = ""
+    for student in st_list:
+        for n, i in enumerate(student):
+            if n == 0:
+                data = data + str(i)
+            else:
+                data = data + "," + str(i)
+        data = data + "\n"
+    
+    if save_as_csv(data):
+        return True
+    else:
+        return False
+    
+def output_attendance_log_as_csv():
+    """
+    入退室ログをCSVファイルとして出力します。
+
+    Returns:
+        ret (bool): 保存が成功したかどうか
+    """
+    log_list = db.execute_database(
+        "SELECT * FROM log"
+    )
+    data = ""
+    for log in log_list:
+        for n, i in enumerate(log):
+            if n == 0:
+                data = data + str(i)
+            else:
+                data = data + "," + str(i)
+        data = data + "\n"
+    
+    if save_as_csv(data):
+        return True
+    else:
+        return False
+    
+def output_system_log_as_csv():
+    """
+    システムログをCSVファイルとして出力します。
+
+    Returns:
+        ret (bool): 保存が成功したかどうか
+    """
+    log_list = db.execute_database(
+        "SELECT * FROM system_log"
+    )
+    data = ""
+    for log in log_list:
+        for n, i in enumerate(log):
+            if n == 0:
+                data = data + str(i)
+            else:
+                data = data + "," + str(i)
+        data = data + "\n"
+    
+    if save_as_csv(data):
+        return True
+    else:
+        return False
+                    
+def save_as_csv(data: str):
+    """
+    データをCSVファイルとして保存します。保存場所を選択するダイアログを表示し，選択された場所に保存します。途中で保存がキャンセルされた場合は，Falseを返します。
+
+    Args:
+        data (str): csv形式のデータ
+        
+    Returns:
+        ret (bool): 保存が成功したかどうか
+    """
+    path = sg.popup_get_file(
+        "CSVファイルを保存する場所を選択してください",
+        save_as=True,
+        file_types=(("CSVファイル", "*.csv"),),
+    )
+    if path is None or path == "":
+        return False
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(data)
+    sg.popup_ok(
+        "CSVファイルとして保存しました。",
+        title="完了",
+        keep_on_top=True,
+        modal=True,
+    )
+    return True
 
 def how_many_unassigned_cards():
     """
@@ -816,7 +1129,7 @@ def how_many_unassigned_cards():
 def end_process():  # 終了処理
     with open(const.SAVES_PATH, 'w') as f:
         json.dump(const.saves, f)
-
+    os._exit(0)
 
 def is_ok_to_open_window(windows: dict):
     """
@@ -855,6 +1168,7 @@ def send_mail(id="", mode="test"):
         print(
             "[!!警告!!] 致命的なエラーです。システム無効化中に，メール送信が実行されようとしました。これはプログラム内の致命的なバグが発生したことを知らせるメッセージです。速やかに開発者に連絡し，修正してください。"
         )
+        const.exceptions.append("[Error] 致命的なエラーです. システム無効化中に，メール送信が実行されようとしました. これはプログラム内の致命的なバグが発生したことを知らせるメッセージです. 速やかに開発者に連絡し，修正してください.")
         return -1
     
     name = db.execute_database("SELECT name FROM student WHERE id = '%s'" % id)[0][0]
@@ -873,7 +1187,8 @@ def send_mail(id="", mode="test"):
             )
             == -1
         ):
-            print("[Error] メールの送信に失敗しました。")
+            const.exceptions.append("[Error] メールの送信に失敗しました.")
+            print("[Error] メールの送信に失敗しました.")
             return -1
     elif mode == "exit":
         if (
@@ -888,6 +1203,7 @@ def send_mail(id="", mode="test"):
             )
             == -1
         ):
+            const.exceptions.append("[Error] メールの送信に失敗しました.")
             print("[Error] メールの送信に失敗しました。")
             return -1
     elif mode == "test":
@@ -899,7 +1215,8 @@ def send_mail(id="", mode="test"):
             )
             == -1
         ):
-            print("[Error] メールの送信に失敗しました。")
+            const.exceptions.append("[Error] メールの送信に失敗しました.")
+            print("[Error] メールの送信に失敗しました.")
             return -1
         if (
             ml.send(
@@ -909,23 +1226,37 @@ def send_mail(id="", mode="test"):
             )
             == -1
         ):
+            const.exceptions.append("[Error] メールの送信に失敗しました.")
             print("[Error] メールの送信に失敗しました。")
             return -1
     else:
-        print("[Error] send_mail()のmode引数が不正です。")
+        const.exceptions.append("[Error] send_mail()のmode引数が不正です.")
+        print("[Error] send_mail()のmode引数が不正です.")
         return -1
-
+    
+    
 
 #! 入退室処理実行関数
-def run_attendance_process(id: str):
+def run_attendance_process(id: str, windows):
     """
     生徒の入退室処理を行います。出席状態を反転し，メールを送信します。
 
     Args:
         id (str): 入退室処理を行う生徒のID
+        
+    Returns:
+        ret (bool): 成功したら -1以外, 失敗したら -1
     """
-    # 念のためチェック
+    
+
+    # 念のためシステム状態をチェック
     if const.states["system"] == const.DISABLED:
+        sg.popup_ok(
+            "致命的なエラーです。システム無効化中に，入退室プロセスが実行されようとしました。これはプロうグラム内で致命的なバグが発生したことを知らせるメッセージです。この問題は速やかに対処されるべきです。速やかに開発者に連絡してください。",
+            title="致命的なエラー！",
+            keep_on_top=True,
+            modal=True,
+        )
         print(
             "[!!警告!!] 致命的なエラーです。システム無効化中に，入退室プロセスが実行されようとしました。これはプロうグラム内で致命的なバグが発生したことを知らせるメッセージです。速やかに開発者に連絡してください。"
         )
@@ -935,26 +1266,43 @@ def run_attendance_process(id: str):
         print("[Error] このカードは登録されていないため，入退室処理は行われませんでした。")
         return -1
 
-    const.wav_touched.play()  # タッチ音を再生
-
     attendance = db.execute_database(
         "SELECT attendance FROM student WHERE id = '%s'" % id
+    )[0][0]
+    
+    name = db.execute_database(
+        "SELECT name FROM student WHERE id = '%s'" % id
+    )[0][0]
+    
+    gender = db.execute_database(
+        "SELECT gender FROM student WHERE id = '%s'" % id
     )[0][0]
 
     if attendance == "出席":
         if db.exit_room(id) == -1:  # 退室処理
             print("[Error] 退室処理に失敗しました。メールは送信されませんでした。")
         else:
-            send_mail(id, mode = "exit")
+            const.wav["goodbye"].play()  # 挨拶
+            if "full_screen_window" in windows: # フルスクリーンウィンドウが開いている場合
+                windows["full_screen_window"]["-greeting-"].update(name + "くん，さようなら！" if gender == "男" else name + "ちゃん，さようなら！")
+            threading.Thread(target=send_mail, args=(id, "exit")).start() # メール送信
     elif attendance == "退席":
         if db.enter_room(id) == -1:  # 入室処理
             print("[Error] 入室処理に失敗しました。メールは送信されませんでした。")
         else:
-            send_mail(id, mode = "enter")
+            if const.hour < 10:
+                const.wav["goodmorning"].play()  # おはよう
+                if "full_screen_window" in windows: # フルスクリーンウィンドウが開いている場合
+                    windows["full_screen_window"]["-greeting-"].update(name + "くん，おはよう!" if gender == "男" else name + "ちゃん，おはよう!")
+            else:
+                const.wav["hello"].play()  # こんにちは
+                if "full_screen_window" in windows: # フルスクリーンウィンドウが開いている場合
+                    windows["full_screen_window"]["-greeting-"].update(name + "くん，こんにちは!" if gender == "男" else name + "ちゃん，こんにちは!")                    
+            threading.Thread(target=send_mail, args=(id, "enter")).start() # メール送信
     else:
         print("[Error] データベース上の生徒の出席状態が不正です。")
         return -1
-
+    return 0
 
 def popup_window(layout, duration=0):
     """
@@ -1272,7 +1620,7 @@ if __name__ == "__main__":
     #     main()
     # else:
     #     ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
-    for thread in threading.enumerate():
-        if thread.is_alive() and thread is not threading.current_thread():
-            thread.join()
-    sys.exit()
+    # for thread in threading.enumerate():
+    #     if thread.is_alive() and thread is not threading.current_thread():
+    #         thread.join()
+    # sys.exit()

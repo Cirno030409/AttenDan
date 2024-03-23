@@ -13,6 +13,7 @@ def get_window():
                 expand_x=True,
                 expand_y=True,
                 pad=((0, 0), (50, 0)),
+                key="-greeting-",  # 挨拶
             ),
         ],
         [
