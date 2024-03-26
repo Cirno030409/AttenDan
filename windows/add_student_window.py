@@ -122,7 +122,7 @@ def get_window():
         ],
         [
             sg.Button(
-                "カードを使用せずに登録",
+                "生徒情報のみを登録し，あとでカードを登録する",
                 size=(50, 2),
                 key="-register_without_card-",
                 tooltip="カードを使用せずに，とりあえず生徒を登録します",

@@ -365,25 +365,28 @@ def get_window():
             [
                 [
                     sg.Text(
-                        "通知メール送信に使用するメールアドレス　　　",
+                        "通知メール送信に使用するメールアドレス：　　　",
                         font=("Arial", 10),
                         justification="left",
-                        pad=((10, 0), (20, 0)),
+                        pad=((10, 0), (0, 0)),
+                        tooltip="アテンダンから，保護者へ送信する入退室通知メールの送信に使用するメールアドレスを入力します",
                     ),
                     sg.InputText(
                         size=(50, 1),
                         font=("Arial", 10),
                         key="-mail_address-",
-                        pad=((10, 10), (20, 0)),
+                        pad=((10, 10), (0, 0)),
                         expand_x=True,
+                        tooltip="アテンダンから，保護者へ送信する入退室通知メールの送信に使用するメールアドレスを入力します",
                     ),
                 ],
                 [
                     sg.Text(
-                        "アテンダンからの情報を受け取るメールアドレス",
+                        "パスワード：　　　　　　　　　　　　　　　　　",
                         font=("Arial", 10),
                         justification="left",
                         pad=((10, 0), (5, 0)),
+                        tooltip="上記のアカウントのパスワードを入力します。Googleアカウントの場合は，アプリパスワードを作成してそれを使用します。",
                     ),
                     sg.InputText(
                         size=(50, 1),
@@ -391,124 +394,140 @@ def get_window():
                         key="-mail_address-",
                         pad=((10, 10), (5, 0)),
                         expand_x=True,
+                        tooltip="上記のアカウントのパスワードを入力します。Googleアカウントの場合は，アプリパスワードを作成してそれを使用します。",
+
                     ),
                 ],
                 [
                     sg.Text(
-                        "入退室時に音を鳴らす",
-                        font=("Arial", 15),
+                        "通知メール送信に使用する予備メールアドレス：　",
+                        font=("Arial", 10),
                         justification="left",
-                        pad=((0, 0), (0, 0)),
+                        pad=((10, 0), (5, 0)),
+                        tooltip="メインのアドレスがメール送信に使用できなかった場合，代替で使用するメールアドレスを入力します",
                     ),
-                    sg.Checkbox(
-                        "",
-                        font=("Arial", 15),
-                        key="-sound-",
-                        pad=((0, 0), (0, 0)),
+                    sg.InputText(
+                        size=(50, 1),
+                        font=("Arial", 10),
+                        key="-mail_address-",
+                        pad=((10, 10), (5, 0)),
+                        expand_x=True,
+                        tooltip="メインのアドレスがメール送信に使用できなかった場合，代替で使用するメールアドレスを入力します",
                     ),
                 ],
                 [
                     sg.Text(
-                        "入退室時に音を鳴らす",
-                        font=("Arial", 15),
+                        "パスワード：　　　　　　　　　　　　　　　　　",
+                        font=("Arial", 10),
                         justification="left",
-                        pad=((0, 0), (0, 0)),
+                        pad=((10, 0), (5, 0)),
+                        tooltip="上記のアカウントのパスワードを入力します。Googleアカウントの場合は，アプリパスワードを作成してそれを使用します。",
                     ),
-                    sg.Checkbox(
-                        "",
-                        font=("Arial", 15),
-                        key="-sound-",
-                        pad=((0, 0), (0, 0)),
+                    sg.InputText(
+                        size=(50, 1),
+                        font=("Arial", 10),
+                        key="-mail_address-",
+                        pad=((10, 10), (5, 0)),
+                        expand_x=True,
+                        tooltip="上記のアカウントのパスワードを入力します。Googleアカウントの場合は，アプリパスワードを作成してそれを使用します。",
+
+                    ),
+                ],
+                [
+                    sg.Text(
+                        "アテンダンからの情報を受け取るメールアドレス：",
+                        font=("Arial", 10),
+                        justification="left",
+                        pad=((10, 0), (15, 0)),
+                        tooltip="アテンダンシステムで，何らかの問題が発生した際にその旨の通知を受け取るメールアドレスを入力します",
+                    ),
+                    sg.InputText(
+                        size=(50, 1),
+                        font=("Arial", 10),
+                        key="-mail_address-",
+                        pad=((10, 10), (15, 0)),
+                        expand_x=True,
+                        tooltip="アテンダンシステムで，何らかの問題が発生した際にその旨の通知を受け取るメールアドレスを入力します",
                     ),
                 ],
             ],
             vertical_alignment="left",
             expand_x=True,
-            # expand_y=True,
+            expand_y=True,
     )
     frames["set2"] = sg.Frame(
-            "システム設定",
+            "入退室処理",
             [
                 [
                     sg.Text(
-                        "通知メール送信に使用するメールアドレス　　　",
+                        "カードタッチ時にタッチ音を鳴らす",
                         font=("Arial", 10),
                         justification="left",
-                        pad=((10, 0), (20, 0)),
-                    ),
-                    sg.InputText(
-                        size=(50, 1),
-                        font=("Arial", 10),
-                        key="-mail_address-",
-                        pad=((10, 10), (20, 0)),
-                        expand_x=True,
-                    ),
-                ],
-                [
-                    sg.Text(
-                        "アテンダンからの情報を受け取るメールアドレス",
-                        font=("Arial", 10),
-                        justification="left",
-                        pad=((10, 0), (5, 0)),
-                    ),
-                    sg.InputText(
-                        size=(50, 1),
-                        font=("Arial", 10),
-                        key="-mail_address-",
-                        pad=((10, 10), (5, 0)),
-                        expand_x=True,
-                    ),
-                ],
-                [
-                    sg.Text(
-                        "入退室時に音を鳴らす",
-                        font=("Arial", 15),
-                        justification="left",
-                        pad=((0, 0), (0, 0)),
+                        pad=((10, 0), (0, 0)),
                     ),
                     sg.Checkbox(
                         "",
-                        font=("Arial", 15),
-                        key="-sound-",
+                        font=("Arial", 10),
+                        key="-toggle_touch_sound-",
                         pad=((0, 0), (0, 0)),
                     ),
                 ],
                 [
                     sg.Text(
-                        "入退室時に音を鳴らす",
-                        font=("Arial", 15),
+                        "カードタッチ時に挨拶音声を鳴らす",
+                        font=("Arial", 10),
                         justification="left",
-                        pad=((0, 0), (0, 0)),
+                        pad=((10, 0), (0, 0)),
                     ),
                     sg.Checkbox(
                         "",
-                        font=("Arial", 15),
-                        key="-sound-",
+                        font=("Arial", 10),
+                        key="-toggle_touch_greeting_sound-",
                         pad=((0, 0), (0, 0)),
+                    ),
+                ],
+                [
+                    sg.Text(
+                        "同一カードのタッチを次の秒数無視する:",
+                        font=("Arial", 10),
+                        justification="left",
+                        pad=((10, 0), (0, 0)),
+                    ),
+                    sg.Combo(
+                        values=["5秒", "10秒", "30秒（デフォルト）", "60秒", "120秒"],
+                        font=("Arial", 10),
+                        key="-ignore_same_card-",
+                        pad=((0, 10), (0, 0)),
+                        expand_x=True,
+                        readonly=True,
                     ),
                 ],
             ],
             vertical_alignment="left",
             expand_x=True,
-            # expand_y=True,
+            expand_y=True,
     )
 
-    scrollable_column = sg.Column(
-        [
-            [frames["set1"]],
-            [frames["set2"]],
-        ],
-        vertical_scroll_only=True,
-        scrollable=True,
-        expand_y=True,
-        expand_x=True,
-    )
+    # scrollable_column = sg.Column(
+    #     [
+    #         [frames["set1"]],
+    #         [frames["set2"]],
+    #     ],
+    #     vertical_scroll_only=True,
+    #     # scrollable=True,
+    #     expand_y=True,
+    #     expand_x=True,
+    #     size=(750, 500),
+    #     justification="center",
+    # )
     tabs["system_setting"] = [
         [
-            sg.Text("システムの設定を行います", justification="center", expand_x=True),
+            sg.Text("アテンダンの設定を行います", justification="center", expand_x=True),
         ],
         [
-            scrollable_column,
+            # scrollable_column,
+            frames["set1"],
+            frames["set2"],
         ],
     ]
         
@@ -550,6 +569,7 @@ def get_window():
             "ヘルプ", 
             [
                 "バージョン情報",
+                "ライセンス表示",
             ]
         ]
     ]
@@ -583,11 +603,9 @@ def get_window():
                     [
                         sg.Tab("メインパネル", tabs["main"]),
                         sg.Tab("通知メール内容設定", tabs["set_mail_content"]),
-                        sg.Tab("システム設定", tabs["system_setting"])
+                        sg.Tab("システム設定", tabs["system_setting"]),
                     ],
                 ],
-                expand_x=True,
-                expand_y=True,
             ),
         ],
     ]

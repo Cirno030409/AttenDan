@@ -10,7 +10,18 @@ class Mail:
         self.port = 587
         self.server = smtplib.SMTP(self.smtp_server, self.port)
 
-    def send(self, to_address, subject, body):
+    def send(self, to_address : str, subject : str, body : str):
+        """
+        与えられたアドレスにメールを送信する.成功すれば0を返す.
+
+        Args:
+            to_address (str): 
+            subject (str): 
+            body (str): 
+
+        Returns:
+            int: 0 if success, otherwise error code
+        """
         msg = MIMEMultipart()
         msg["From"] = self.from_address
         msg["To"] = to_address
@@ -21,8 +32,9 @@ class Mail:
             self.server.sendmail(self.from_address, to_address, text)
         except Exception as e:
             print("[Mail] sent failed. :", e)
-            return -1
+            return e
         print("[Mail] sent. :", to_address, subject, body)
+        return 0
 
     def login_smtp(self, from_address, password):  # SMTPサーバーにログイン
         self.from_address = from_address

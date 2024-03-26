@@ -252,11 +252,10 @@ def showgui_main():  # GUIを表示
 
     # 起動時のメッセージ
     print(
-        "=======    Welcome to "
-        + const.SYSTEM_NAME
-        + " ver. "
-        + const.VERSION
-        + "   ======="
+        "========================================\n\n"
+        + "Welcome to " + const.SYSTEM_NAME + " ver. " + const.VERSION
+        + "\n copyright© 2024 yuta tanimura All rights reserved."
+        + "\n\n========================================"
     )
     
     check_init_error(init_error) # 起動時のエラーチェック
@@ -283,9 +282,10 @@ def showgui_main():  # GUIを表示
         
         ## 別スレッドで発生した例外をキャッチ
         if len(const.exceptions) > 0:
-            for i, e in const.exceptions:
+            for i, e in enumerate(const.exceptions):
                 print (e)
                 const.exceptions.pop(i)
+                const.wav["error_normal"].play() # エラー音を再生
                 
         
         ## NFCのカードのタッチを確認
@@ -520,7 +520,7 @@ def showgui_main():  # GUIを表示
                         )
                         == "Yes"
                     ):
-                        if send_mail(mode="test") == -1:
+                        if send_mail("山田太郎", const.saves["mail"]["test_address"], mode="test") == -1:
                             sg.popup_ok(
                                 "テストメールの送信に失敗しました。",
                                 title="エラー",
@@ -538,7 +538,7 @@ def showgui_main():  # GUIを表示
                 ### バージョン情報
                 elif event == "バージョン情報":
                     sg.popup_ok(
-                        const.SYSTEM_NAME + " v" + const.VERSION + "\n\n" + const.RELEASE_NOTES + "\n\n何か問題があれば，下記連絡先までご連絡ください。\n\n" + "開発者: 谷村悠太\ntaniymail@icloud.com",
+                        const.SYSTEM_NAME + " v" + const.VERSION + "\ncopyright© 2024 yuta tanimura All rights reserved." + "\n\n" + const.RELEASE_NOTES + "\n\n何か問題があれば，下記連絡先までご連絡ください。\n\n" + "開発者: 谷村悠太\ntaniymail@icloud.com",
                         title="バージョン情報",
                         keep_on_top=True,
                         modal=True,
@@ -570,6 +570,16 @@ def showgui_main():  # GUIを表示
                     
                 elif event == "アテンダンを終了":
                     end_process()
+                    
+                elif event == "ライセンス表示":
+                    with open("license.txt", "r", encoding="utf-8") as f:
+                        license_text = f.read()
+                    sg.popup_ok(
+                        "このソフトウェアは，GNU Lesser General Public License v3.0に基づいて配布されています。\nライセンス文は，本ソフトウェアのディレクトリ内の\"license.txt\"に記載しています。",
+                        title="ライセンス",
+                        keep_on_top=True,
+                        modal=True,
+                    )
 
                 ### メールの設定を保存
                 const.saves["mail"]["enter"]["subject"] = values[
@@ -598,7 +608,16 @@ def showgui_main():  # GUIを表示
                             modal=True,
                         )
                         continue
-
+                    try:
+                        age = int(values["-st_age-"])
+                    except ValueError:
+                        sg.PopupOK(
+                            "年齢は数値で入力してください。",
+                            title="入力エラー",
+                            keep_on_top=True,
+                            modal=True,
+                        )
+                        continue
                     if (
                         register_student(
                             values["-st_name-"],
@@ -638,8 +657,18 @@ def showgui_main():  # GUIを表示
                             modal=True,
                         )
                         continue
+                    try:
+                        age = int(values["-st_age-"])
+                    except ValueError:
+                        sg.PopupOK(
+                            "年齢は数値で入力してください。",
+                            title="入力エラー",
+                            keep_on_top=True,
+                            modal=True,
+                        )
+                        continue
                     if sg.popup_yes_no(
-                        "カードを使用せずに，生徒を登録しますか？\nカードを使用せずに登録した生徒は，後からカードの割り当てを行ってください。",
+                        "カードを使用せずに，生徒を登録しますか？\nカードを使用せずに登録した生徒は，後からカードの割り当てを行う必要があります。",
                         title="生徒登録",
                         keep_on_top=True,
                         modal=True,
@@ -1021,7 +1050,7 @@ def output_students_and_parents_list_as_csv():
         ret (bool): 保存が成功したかどうか
     """
     st_list = db.execute_database(
-        "SELECT student.*,  FROM student join parent on student.id = parent.id"
+        "SELECT * FROM student join parent on student.id = parent.id"
     )
     data = ""
     for student in st_list:
@@ -1156,7 +1185,7 @@ def is_ok_to_open_window(windows: dict):
         return True
 
 
-def send_mail(id="", mode="test"):
+def send_mail(name, address, mode="test"):
     """
     入退室メールを送信します。
 
@@ -1164,73 +1193,47 @@ def send_mail(id="", mode="test"):
         id (str): 入退室した生徒のID
         mode (str): 送信するメールの種類。"enter"，"exit"または"test"のいずれかを指定します。"test"を指定すると，テストメールアドレスにテストメールを送信します。
     """
-    if const.states["system"] == const.DISABLED:
-        print(
-            "[!!警告!!] 致命的なエラーです。システム無効化中に，メール送信が実行されようとしました。これはプログラム内の致命的なバグが発生したことを知らせるメッセージです。速やかに開発者に連絡し，修正してください。"
-        )
-        const.exceptions.append("[Error] 致命的なエラーです. システム無効化中に，メール送信が実行されようとしました. これはプログラム内の致命的なバグが発生したことを知らせるメッセージです. 速やかに開発者に連絡し，修正してください.")
-        return -1
-    
-    name = db.execute_database("SELECT name FROM student WHERE id = '%s'" % id)[0][0]
-    address = db.execute_database("SELECT mail_address FROM parent WHERE id = '%s'" % id)[0][0]
-
     if mode == "enter":
-        if (
-            ml.send(
+        ret = ml.send(
                 address,
-                const.saves["mail"]["enter"]["subject"].format(
-                    name=name
-                ),
-                const.saves["mail"]["enter"]["body"].format(
-                    name=name
-                ),
+                const.saves["mail"]["enter"]["subject"].format(name=name),
+                const.saves["mail"]["enter"]["body"].format(name=name),
             )
-            == -1
-        ):
-            const.exceptions.append("[Error] メールの送信に失敗しました.")
+        if (ret != 0):
+            const.exceptions.append("[Error] メールの送信に失敗しました.送信アカウントの設定とネットワーク環境を確認してください.: " + str(ret))
             print("[Error] メールの送信に失敗しました.")
             return -1
     elif mode == "exit":
-        if (
-            ml.send(
+        ret = ml.send(
                 address,
-                const.saves["mail"]["exit"]["subject"].format(
-                    name=name
-                ),
-                const.saves["mail"]["exit"]["body"].format(
-                    name=name
-                ),
+                const.saves["mail"]["exit"]["subject"].format(name=name),
+                const.saves["mail"]["exit"]["body"].format(name=name),
             )
-            == -1
-        ):
-            const.exceptions.append("[Error] メールの送信に失敗しました.")
+        if (ret != 0):
+            const.exceptions.append("[Error] メールの送信に失敗しました.送信アカウントの設定とネットワーク環境を確認してください.: " + str(ret))
             print("[Error] メールの送信に失敗しました。")
             return -1
     elif mode == "test":
-        if (
-            ml.send(
-                const.saves["mail"]["test_address"],
-                const.saves["mail"]["enter"]["subject"].format(name="山田太郎"),
-                const.saves["mail"]["enter"]["body"].format(name="山田太郎"),
+        ret = ml.send(
+                address,
+                const.saves["mail"]["enter"]["subject"].format(name=name),
+                const.saves["mail"]["enter"]["body"].format(name=name),
             )
-            == -1
-        ):
-            const.exceptions.append("[Error] メールの送信に失敗しました.")
+        if (ret != 0):
+            const.exceptions.append("[Error] メールの送信に失敗しました.送信アカウントの設定とネットワーク環境を確認してください.: " + str(ret))
             print("[Error] メールの送信に失敗しました.")
             return -1
-        if (
-            ml.send(
-                const.saves["mail"]["test_address"],
-                const.saves["mail"]["exit"]["subject"].format(name="山田太郎"),
-                const.saves["mail"]["exit"]["body"].format(name="山田太郎"),
+        ret = ml.send(
+                address,
+                const.saves["mail"]["exit"]["subject"].format(name=name),
+                const.saves["mail"]["exit"]["body"].format(name=name),
             )
-            == -1
-        ):
-            const.exceptions.append("[Error] メールの送信に失敗しました.")
-            print("[Error] メールの送信に失敗しました。")
+        if (ret != 0):
+            const.exceptions.append("[Error] メールの送信に失敗しました.送信アカウントの設定とネットワーク環境を確認してください.: " + str(ret))
+            print("[Error] メールの送信に失敗しました.")
             return -1
     else:
-        const.exceptions.append("[Error] send_mail()のmode引数が不正です.")
+        const.exceptions.append("[Error] 内部エラーです.send_mail()のmode引数が不正です.")
         print("[Error] send_mail()のmode引数が不正です.")
         return -1
     
@@ -1240,6 +1243,7 @@ def send_mail(id="", mode="test"):
 def run_attendance_process(id: str, windows):
     """
     生徒の入退室処理を行います。出席状態を反転し，メールを送信します。
+    この関数は，システムが無効化されている状態で呼び出されてはなりません。
 
     Args:
         id (str): 入退室処理を行う生徒のID
@@ -1277,6 +1281,8 @@ def run_attendance_process(id: str, windows):
     gender = db.execute_database(
         "SELECT gender FROM student WHERE id = '%s'" % id
     )[0][0]
+    
+    address = db.execute_database("SELECT mail_address FROM parent WHERE id = '%s'" % id)[0][0]
 
     if attendance == "出席":
         if db.exit_room(id) == -1:  # 退室処理
@@ -1285,7 +1291,7 @@ def run_attendance_process(id: str, windows):
             const.wav["goodbye"].play()  # 挨拶
             if "full_screen_window" in windows: # フルスクリーンウィンドウが開いている場合
                 windows["full_screen_window"]["-greeting-"].update(name + "くん，さようなら！" if gender == "男" else name + "ちゃん，さようなら！")
-            threading.Thread(target=send_mail, args=(id, "exit")).start() # メール送信
+            threading.Thread(target=send_mail, args=(name, address, "exit")).start() # メール送信
     elif attendance == "退席":
         if db.enter_room(id) == -1:  # 入室処理
             print("[Error] 入室処理に失敗しました。メールは送信されませんでした。")
@@ -1298,7 +1304,7 @@ def run_attendance_process(id: str, windows):
                 const.wav["hello"].play()  # こんにちは
                 if "full_screen_window" in windows: # フルスクリーンウィンドウが開いている場合
                     windows["full_screen_window"]["-greeting-"].update(name + "くん，こんにちは!" if gender == "男" else name + "ちゃん，こんにちは!")                    
-            threading.Thread(target=send_mail, args=(id, "enter")).start() # メール送信
+            threading.Thread(target=send_mail, args=(name, address, "enter")).start() # メール送信
     else:
         print("[Error] データベース上の生徒の出席状態が不正です。")
         return -1
